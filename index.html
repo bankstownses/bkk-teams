@@ -17,14 +17,15 @@
     margin: 0; padding: 0; background: #05070a;
     height: 100%; overflow: hidden; overscroll-behavior: none;
   }
-  /* Genuine responsive design: the app's own components use clamp()
-     for fluid font/spacing sizing that scales smoothly with the real
-     viewport width -- no zoom hacks, no fixed breakpoint jumps. The
-     container itself gets a bit more room on wider screens (via vw)
-     so it doesn't sit as a narrow phone-shaped column on a monitor,
-     capped so it never becomes absurdly wide either. */
+  /* The app shell now genuinely fills the entire screen on any
+     device -- no artificial cap here. Individual components (the
+     Dispatch card, Header row, bottom nav row) each center their own
+     readable content at a sensible max-width internally, so the
+     dark app background always reaches every edge of the screen,
+     and only the actual text/buttons avoid becoming absurdly wide
+     on a big monitor. */
   #root {
-    height: 100%; width: 100%; max-width: min(92vw, 900px); margin: 0 auto;
+    height: 100%; width: 100%;
     background: #05070a;
   }
   * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
@@ -562,9 +563,13 @@ function DispatchScreen({
   return /*#__PURE__*/React.createElement("div", {
     style: {
       height: "100%",
+      width: "100%",
       display: "flex",
       flexDirection: "column",
-      padding: "clamp(14px, 2.5vw, 32px)"
+      padding: "clamp(14px, 2.5vw, 32px)",
+      maxWidth: 1000,
+      margin: "0 auto",
+      boxSizing: "border-box"
     }
   }, !activeJob ? /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1926,12 +1931,20 @@ function Header({
   const st = state.vehicleStates[vehicleId].teamStatus;
   return /*#__PURE__*/React.createElement("div", {
     style: {
+      width: "100%",
+      borderBottom: "1px solid #1c2228",
+      background: "#0d1114",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: "10px 14px",
-      borderBottom: "1px solid #1c2228",
-      background: "#0d1114"
+      padding: "clamp(10px, 1.4vw, 18px) clamp(14px, 2.2vw, 32px)",
+      maxWidth: 1000,
+      margin: "0 auto",
+      boxSizing: "border-box"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1945,14 +1958,14 @@ function Header({
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "Oswald, sans-serif",
-      fontSize: 15,
+      fontSize: "clamp(15px, 1.6vw, 20px)",
       fontWeight: 700,
       color: "#F2F5F6"
     }
   }, vehicleId), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "JetBrains Mono, monospace",
-      fontSize: 9,
+      fontSize: "clamp(9px, 1vw, 12px)",
       color: "#7C8791"
     }
   }, st.label))), /*#__PURE__*/React.createElement("div", {
@@ -1964,7 +1977,7 @@ function Header({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "JetBrains Mono, monospace",
-      fontSize: 13,
+      fontSize: "clamp(13px, 1.4vw, 18px)",
       color: "#B7C0C8"
     }
   }, formatTime(now.toISOString())), /*#__PURE__*/React.createElement("button", {
@@ -1975,9 +1988,9 @@ function Header({
       borderRadius: 6,
       color: "#7C8791",
       fontFamily: "Inter, sans-serif",
-      fontSize: 10,
+      fontSize: "clamp(10px, 1.1vw, 14px)",
       fontWeight: 600,
-      padding: "4px 8px",
+      padding: "clamp(4px, 0.6vw, 8px) clamp(8px, 1vw, 14px)",
       cursor: "pointer"
     }
   }, "Change server"), /*#__PURE__*/React.createElement("button", {
@@ -1988,12 +2001,12 @@ function Header({
       borderRadius: 6,
       color: "#7C8791",
       fontFamily: "Inter, sans-serif",
-      fontSize: 10,
+      fontSize: "clamp(10px, 1.1vw, 14px)",
       fontWeight: 600,
-      padding: "4px 8px",
+      padding: "clamp(4px, 0.6vw, 8px) clamp(8px, 1vw, 14px)",
       cursor: "pointer"
     }
-  }, "Log Out")));
+  }, "Log Out"))));
 }
 function BottomNav({
   tab,
@@ -2027,11 +2040,17 @@ function BottomNav({
   return /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
+      width: "100%",
       background: "#0d1114",
       borderTop: "1px solid #2E373F",
-      display: "flex",
       zIndex: 30,
       paddingBottom: "env(safe-area-inset-bottom, 0px)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      maxWidth: 1000,
+      margin: "0 auto"
     }
   }, tabs.map(t => {
     const active = tab === t.id;
@@ -2043,7 +2062,7 @@ function BottomNav({
         flex: 1,
         background: "none",
         border: "none",
-        padding: "10px 0 8px",
+        padding: "clamp(10px, 1.2vw, 16px) 0 clamp(8px, 1vw, 12px)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -2053,7 +2072,11 @@ function BottomNav({
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       size: 19,
-      color: active ? "#2F8FD1" : "#7C8791"
+      color: active ? "#2F8FD1" : "#7C8791",
+      style: {
+        width: "clamp(19px, 1.8vw, 26px)",
+        height: "clamp(19px, 1.8vw, 26px)"
+      }
     }), t.badge > 0 && /*#__PURE__*/React.createElement("span", {
       style: {
         position: "absolute",
@@ -2074,12 +2097,12 @@ function BottomNav({
     }, t.badge), /*#__PURE__*/React.createElement("span", {
       style: {
         fontFamily: "Inter, sans-serif",
-        fontSize: 10.5,
+        fontSize: "clamp(10.5px, 1vw, 14px)",
         fontWeight: 600,
         color: active ? "#2F8FD1" : "#7C8791"
       }
     }, t.label));
-  }));
+  })));
 }
 
 // ---------------------------------------------------------------
