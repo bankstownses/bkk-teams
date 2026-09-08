@@ -1,6 +1,7 @@
 // BKK-FEIGE service worker -- runs in the background, separate from the
 // app's own page, which is what lets it show a real notification even
 // when the app isn't open at all.
+// ok
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
