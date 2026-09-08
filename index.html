@@ -17,13 +17,19 @@
     margin: 0; padding: 0; background: #05070a;
     height: 100%; overflow: hidden; overscroll-behavior: none;
   }
-  /* On a wide screen (desktop), the app stays a sensible phone-like
-     width instead of stretching full-width -- which is what was
-     making buttons look tiny and lost. On an actual phone this has
-     no effect since the viewport is already narrower than the cap. */
   #root {
-    height: 100%; max-width: 560px; margin: 0 auto;
-    background: #05070a; box-shadow: 0 0 60px rgba(0,0,0,0.5);
+    height: 100%; max-width: 480px; margin: 0 auto;
+    background: #05070a;
+  }
+  /* On a real desktop screen, scale the whole app up instead of
+     leaving it at phone-sized pixels -- zoom (unlike transform:scale)
+     properly reflows layout, so nothing clips or overlaps. Phones
+     never hit this breakpoint, so this has zero effect on mobile. */
+  @media (min-width: 900px) {
+    #root { zoom: 1.55; box-shadow: 0 0 80px rgba(0,0,0,0.6); }
+  }
+  @media (min-width: 1400px) {
+    #root { zoom: 1.85; }
   }
   * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
   input, textarea, select { font-size: 16px; }
