@@ -35,7 +35,7 @@
 <script type="module">
 import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-import { Truck, Navigation, Users, ClipboardList, CheckCircle2, ChevronRight, X, Plus, MapPin, Phone, RefreshCw, ArrowLeft, Star, Trash2, LayoutGrid } from "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1";
+import { Truck, Navigation, Users, ClipboardList, CheckCircle2, ChevronRight, X, Plus, MapPin, Phone, RefreshCw, ArrowLeft, Star, Trash2, LayoutGrid, Layers } from "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1";
 
 // ---------------------------------------------------------------
 // CONSTANTS -- mirrors bkk_server.js exactly.
@@ -477,8 +477,7 @@ function ConnectScreen({
 function DispatchScreen({
   vehicleId,
   state,
-  dispatch,
-  onOpenQueue
+  dispatch
 }) {
   const [callOffReason, setCallOffReason] = useState("");
   const [showCallOff, setShowCallOff] = useState(false);
@@ -487,7 +486,6 @@ function DispatchScreen({
   const [busy, setBusy] = useState(false);
   const v = state.vehicleStates[vehicleId];
   const activeJob = v.activeJob;
-  const upNext = v.queue.filter(j => j.id !== activeJob?.id);
   const currentPhase = activeJob ? v.progress[activeJob.id]?.phase : null;
   const phaseIndex = PHASES.indexOf(currentPhase);
   const act = async fn => {
@@ -528,49 +526,48 @@ function DispatchScreen({
   });
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: "16px 16px 90px"
+      minHeight: "calc(100vh - 130px)",
+      display: "flex",
+      flexDirection: "column",
+      padding: "14px 14px 90px"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, !activeJob ? /*#__PURE__*/React.createElement("div", {
     style: {
-      fontFamily: "JetBrains Mono, monospace",
-      fontSize: 11,
-      color: "#7C8791",
-      marginBottom: 8,
-      letterSpacing: "0.04em"
-    }
-  }, "PRIMARY TASKING"), !activeJob ? /*#__PURE__*/React.createElement("div", {
-    style: {
+      flex: 1,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
       background: "#161B20",
       border: "1px dashed #2E373F",
-      borderRadius: 10,
-      padding: 24,
+      borderRadius: 14,
       textAlign: "center",
       fontFamily: "Inter, sans-serif",
-      fontSize: 13,
-      color: "#5c6771",
-      marginBottom: 20
+      fontSize: 14,
+      color: "#5c6771"
     }
   }, "No active tasking.") : /*#__PURE__*/React.createElement("div", {
     style: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
       background: "#161B20",
       border: "1px solid #E4780C55",
-      borderRadius: 10,
-      padding: 16,
-      marginBottom: 20
+      borderRadius: 14,
+      padding: 20
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 8,
-      marginBottom: 4,
+      gap: 10,
+      marginBottom: 6,
       flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontFamily: "Oswald, sans-serif",
-      fontSize: 17,
-      fontWeight: 600,
+      fontSize: 23,
+      fontWeight: 700,
       color: "#F2F5F6"
     }
   }, activeJob.type), /*#__PURE__*/React.createElement(PriorityChip, {
@@ -578,23 +575,26 @@ function DispatchScreen({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "JetBrains Mono, monospace",
-      fontSize: 10.5,
+      fontSize: 11.5,
       color: "#5c6771",
-      marginBottom: 10
+      marginBottom: 14
     }
   }, shortId(activeJob.id)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 6,
+      gap: 8,
       color: "#B7C0C8",
       fontFamily: "Inter, sans-serif",
-      fontSize: 13.5,
-      marginBottom: 4
+      fontSize: 16,
+      marginBottom: 6
     }
   }, /*#__PURE__*/React.createElement(MapPin, {
-    size: 14,
-    color: "#E4780C"
+    size: 18,
+    color: "#E4780C",
+    style: {
+      flexShrink: 0
+    }
   }), " ", activeJob.addr), (activeJob.callersName || activeJob.callersNumber) && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -602,20 +602,24 @@ function DispatchScreen({
       gap: 8,
       color: "#7C8791",
       fontFamily: "Inter, sans-serif",
-      fontSize: 12.5,
+      fontSize: 13.5,
       marginTop: 4
     }
   }, activeJob.callersName || "—", activeJob.callersNumber && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Phone, {
-    size: 12,
+    size: 13,
     style: {
       marginLeft: 4
     }
   }), " ", activeJob.callersNumber)), /*#__PURE__*/React.createElement("div", {
     style: {
+      flex: 1
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
       display: "grid",
-      gridTemplateColumns: "repeat(4, 1fr)",
-      gap: 6,
-      marginTop: 14
+      gridTemplateColumns: "repeat(2, 1fr)",
+      gap: 10,
+      marginBottom: 12
     }
   }, PHASES.map((p, i) => {
     const done = i < phaseIndex || i === phaseIndex;
@@ -626,13 +630,13 @@ function DispatchScreen({
       onClick: () => setPhase(p),
       style: {
         background: done ? "#2F8FD122" : "#0d1114",
-        border: done ? "1px solid #2F8FD188" : "1px solid #2E373F",
-        borderRadius: 7,
+        border: done ? "2px solid #2F8FD188" : "2px solid #2E373F",
+        borderRadius: 10,
         color: done ? "#2F8FD1" : clickable ? "#B7C0C8" : "#3a444d",
         fontFamily: "JetBrains Mono, monospace",
         fontWeight: 700,
-        fontSize: 9.5,
-        padding: "9px 2px",
+        fontSize: 15,
+        padding: "20px 4px",
         cursor: clickable ? "pointer" : "not-allowed",
         opacity: clickable || done ? 1 : 0.5
       }
@@ -642,13 +646,13 @@ function DispatchScreen({
     onClick: () => setShowComplete(true),
     style: {
       background: phaseIndex >= PHASES.length - 1 ? "#3FA34D" : "#0d1114",
-      border: phaseIndex >= PHASES.length - 1 ? "none" : "1px solid #2E373F",
-      borderRadius: 7,
+      border: phaseIndex >= PHASES.length - 1 ? "none" : "2px solid #2E373F",
+      borderRadius: 10,
       color: phaseIndex >= PHASES.length - 1 ? "#0d1114" : "#3a444d",
       fontFamily: "JetBrains Mono, monospace",
       fontWeight: 700,
-      fontSize: 9.5,
-      padding: "9px 2px",
+      fontSize: 15,
+      padding: "20px 4px",
       cursor: phaseIndex >= PHASES.length - 1 ? "pointer" : "not-allowed"
     }
   }, "COMPLETE")), /*#__PURE__*/React.createElement("button", {
@@ -656,15 +660,14 @@ function DispatchScreen({
     disabled: busy,
     style: {
       width: "100%",
-      marginTop: 10,
       background: "none",
       border: "1px solid #D9463D55",
-      borderRadius: 8,
+      borderRadius: 10,
       color: "#D9463D",
       fontFamily: "Inter, sans-serif",
       fontWeight: 600,
-      fontSize: 12.5,
-      padding: "9px 0",
+      fontSize: 14,
+      padding: "13px 0",
       cursor: "pointer"
     }
   }, "Call Off"), showCallOff && /*#__PURE__*/React.createElement("div", {
@@ -792,30 +795,7 @@ function DispatchScreen({
       padding: "9px 0",
       cursor: "pointer"
     }
-  }, "Confirm Complete")))), upNext.length > 0 && /*#__PURE__*/React.createElement("button", {
-    onClick: onOpenQueue,
-    style: {
-      width: "100%",
-      background: "#161B20",
-      border: "1px solid #2E373F",
-      borderRadius: 10,
-      padding: "13px 16px",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "Oswald, sans-serif",
-      fontSize: 14,
-      fontWeight: 600,
-      color: "#F2F5F6"
-    }
-  }, "Tasked (", upNext.length, ")"), /*#__PURE__*/React.createElement(ChevronRight, {
-    size: 16,
-    color: "#7C8791"
-  })));
+  }, "Confirm Complete")))));
 }
 
 // ---------------------------------------------------------------
@@ -826,8 +806,7 @@ function DispatchScreen({
 function QueueScreen({
   vehicleId,
   state,
-  dispatch,
-  onBack
+  dispatch
 }) {
   const [busy, setBusy] = useState(false);
   const v = state.vehicleStates[vehicleId];
@@ -839,7 +818,6 @@ function QueueScreen({
         vehicle: vehicleId,
         jobId
       });
-      onBack();
     } catch (e) {/* surfaced via banner */} finally {
       setBusy(false);
     }
@@ -848,31 +826,14 @@ function QueueScreen({
     style: {
       padding: "16px 16px 90px"
     }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
-    style: {
-      background: "none",
-      border: "none",
-      color: "#7C8791",
-      fontFamily: "Inter, sans-serif",
-      fontSize: 13,
-      fontWeight: 600,
-      display: "flex",
-      alignItems: "center",
-      gap: 5,
-      cursor: "pointer",
-      padding: 0,
-      marginBottom: 16
-    }
-  }, /*#__PURE__*/React.createElement(ArrowLeft, {
-    size: 15
-  }), " Back to Dispatch"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "Oswald, sans-serif",
       fontSize: 20,
       fontWeight: 600,
       color: "#F2F5F6",
-      marginBottom: 2
+      marginBottom: 2,
+      marginTop: 4
     }
   }, "Tasked"), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2002,13 +1963,19 @@ function Header({
 function BottomNav({
   tab,
   setTab,
-  incomingCount
+  incomingCount,
+  taskedCount
 }) {
   const tabs = [{
     id: "dispatch",
     label: "Dispatch",
     icon: ClipboardList,
     badge: incomingCount
+  }, {
+    id: "tasked",
+    label: "Tasked",
+    icon: Layers,
+    badge: taskedCount
   }, {
     id: "map",
     label: "Map",
@@ -2191,7 +2158,6 @@ function App() {
     dispatch
   } = useServerState(serverUrl);
   const [tab, setTab] = useState("dispatch");
-  const [showQueue, setShowQueue] = useState(false);
   const [pushStatus, setPushStatus] = useState(null); // null | "unsupported" | "denied" | "subscribed" | "error"
 
   // No login cookie -- there's no login form in this app anymore, so
@@ -2287,6 +2253,8 @@ function App() {
   }
   const incomingCount = state.vehicleStates[vehicleId].incomingQueue.length;
   const incomingJob = state.vehicleStates[vehicleId].incomingQueue[0];
+  const vState = state.vehicleStates[vehicleId];
+  const taskedCount = vState.queue.filter(j => j.id !== vState.activeJob?.id).length;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
@@ -2311,16 +2279,14 @@ function App() {
     state: state,
     onLogOut: logOut,
     onChangeServer: () => setServerUrl("")
-  }), showQueue ? /*#__PURE__*/React.createElement(QueueScreen, {
+  }), tab === "dispatch" && /*#__PURE__*/React.createElement(DispatchScreen, {
     vehicleId: vehicleId,
     state: state,
-    dispatch: dispatch,
-    onBack: () => setShowQueue(false)
-  }) : /*#__PURE__*/React.createElement(React.Fragment, null, tab === "dispatch" && /*#__PURE__*/React.createElement(DispatchScreen, {
+    dispatch: dispatch
+  }), tab === "tasked" && /*#__PURE__*/React.createElement(QueueScreen, {
     vehicleId: vehicleId,
     state: state,
-    dispatch: dispatch,
-    onOpenQueue: () => setShowQueue(true)
+    dispatch: dispatch
   }), tab === "map" && /*#__PURE__*/React.createElement(MapScreen, {
     vehicleId: vehicleId,
     state: state
@@ -2334,8 +2300,9 @@ function App() {
   }), /*#__PURE__*/React.createElement(BottomNav, {
     tab: tab,
     setTab: setTab,
-    incomingCount: incomingCount
-  })), incomingJob && /*#__PURE__*/React.createElement(IncomingTaskingOverlay, {
+    incomingCount: incomingCount,
+    taskedCount: taskedCount
+  }), incomingJob && /*#__PURE__*/React.createElement(IncomingTaskingOverlay, {
     vehicleId: vehicleId,
     job: incomingJob,
     dispatch: dispatch
