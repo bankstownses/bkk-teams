@@ -17,19 +17,15 @@
     margin: 0; padding: 0; background: #05070a;
     height: 100%; overflow: hidden; overscroll-behavior: none;
   }
+  /* Genuine responsive design: the app's own components use clamp()
+     for fluid font/spacing sizing that scales smoothly with the real
+     viewport width -- no zoom hacks, no fixed breakpoint jumps. The
+     container itself gets a bit more room on wider screens (via vw)
+     so it doesn't sit as a narrow phone-shaped column on a monitor,
+     capped so it never becomes absurdly wide either. */
   #root {
-    height: 100%; max-width: 480px; margin: 0 auto;
+    height: 100%; width: 100%; max-width: min(92vw, 900px); margin: 0 auto;
     background: #05070a;
-  }
-  /* On a real desktop screen, scale the whole app up instead of
-     leaving it at phone-sized pixels -- zoom (unlike transform:scale)
-     properly reflows layout, so nothing clips or overlaps. Phones
-     never hit this breakpoint, so this has zero effect on mobile. */
-  @media (min-width: 900px) {
-    #root { zoom: 1.55; box-shadow: 0 0 80px rgba(0,0,0,0.6); }
-  }
-  @media (min-width: 1400px) {
-    #root { zoom: 1.85; }
   }
   * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
   input, textarea, select { font-size: 16px; }
@@ -568,7 +564,7 @@ function DispatchScreen({
       height: "100%",
       display: "flex",
       flexDirection: "column",
-      padding: "14px"
+      padding: "clamp(14px, 2.5vw, 32px)"
     }
   }, !activeJob ? /*#__PURE__*/React.createElement("div", {
     style: {
@@ -581,7 +577,7 @@ function DispatchScreen({
       borderRadius: 14,
       textAlign: "center",
       fontFamily: "Inter, sans-serif",
-      fontSize: 14,
+      fontSize: "clamp(14px, 1.6vw, 20px)",
       color: "#5c6771"
     }
   }, "No active tasking.") : /*#__PURE__*/React.createElement("div", {
@@ -592,7 +588,7 @@ function DispatchScreen({
       background: "#161B20",
       border: "1px solid #E4780C55",
       borderRadius: 14,
-      padding: 20
+      padding: "clamp(20px, 3vw, 40px)"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -605,7 +601,7 @@ function DispatchScreen({
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontFamily: "Oswald, sans-serif",
-      fontSize: 23,
+      fontSize: "clamp(23px, 3.4vw, 42px)",
       fontWeight: 700,
       color: "#F2F5F6"
     }
@@ -614,7 +610,7 @@ function DispatchScreen({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "JetBrains Mono, monospace",
-      fontSize: 11.5,
+      fontSize: "clamp(11.5px, 1.3vw, 16px)",
       color: "#5c6771",
       marginBottom: 14
     }
@@ -625,7 +621,7 @@ function DispatchScreen({
       gap: 8,
       color: "#B7C0C8",
       fontFamily: "Inter, sans-serif",
-      fontSize: 16,
+      fontSize: "clamp(16px, 2vw, 24px)",
       marginBottom: 6
     }
   }, /*#__PURE__*/React.createElement(MapPin, {
@@ -641,7 +637,7 @@ function DispatchScreen({
       gap: 8,
       color: "#7C8791",
       fontFamily: "Inter, sans-serif",
-      fontSize: 13.5,
+      fontSize: "clamp(13.5px, 1.6vw, 19px)",
       marginTop: 4
     }
   }, activeJob.callersName || "—", activeJob.callersNumber && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Phone, {
@@ -657,7 +653,7 @@ function DispatchScreen({
     style: {
       display: "grid",
       gridTemplateColumns: "repeat(2, 1fr)",
-      gap: 10,
+      gap: "clamp(10px, 1.4vw, 20px)",
       marginBottom: 12
     }
   }, PHASES.map((p, i) => {
@@ -674,8 +670,8 @@ function DispatchScreen({
         color: done ? "#2F8FD1" : clickable ? "#B7C0C8" : "#3a444d",
         fontFamily: "JetBrains Mono, monospace",
         fontWeight: 700,
-        fontSize: 15,
-        padding: "20px 4px",
+        fontSize: "clamp(15px, 1.8vw, 24px)",
+        padding: "clamp(20px, 3vw, 40px) 4px",
         cursor: clickable ? "pointer" : "not-allowed",
         opacity: clickable || done ? 1 : 0.5
       }
@@ -690,8 +686,8 @@ function DispatchScreen({
       color: phaseIndex >= PHASES.length - 1 ? "#0d1114" : "#3a444d",
       fontFamily: "JetBrains Mono, monospace",
       fontWeight: 700,
-      fontSize: 15,
-      padding: "20px 4px",
+      fontSize: "clamp(15px, 1.8vw, 24px)",
+      padding: "clamp(20px, 3vw, 40px) 4px",
       cursor: phaseIndex >= PHASES.length - 1 ? "pointer" : "not-allowed"
     }
   }, "COMPLETE")), /*#__PURE__*/React.createElement("button", {
@@ -705,8 +701,8 @@ function DispatchScreen({
       color: "#D9463D",
       fontFamily: "Inter, sans-serif",
       fontWeight: 600,
-      fontSize: 14,
-      padding: "13px 0",
+      fontSize: "clamp(14px, 1.6vw, 20px)",
+      padding: "clamp(13px, 1.8vw, 22px) 0",
       cursor: "pointer"
     }
   }, "Call Off"), showCallOff && /*#__PURE__*/React.createElement("div", {
