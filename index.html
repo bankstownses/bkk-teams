@@ -17,44 +17,21 @@
   #root { min-height: 100vh; }
   * { -webkit-tap-highlight-color: transparent; }
   input, textarea, select { font-size: 16px; }
-  #fallback-error {
-    display: none; position: fixed; inset: 0; background: #05070a; color: #F2F5F6;
-    font-family: -apple-system, sans-serif; padding: 20px; box-sizing: border-box; z-index: 9999; overflow: auto;
-  }
+  #fallback-error { display: none; position: fixed; inset: 0; background: #05070a; color: #F2F5F6; font-family: -apple-system, sans-serif; padding: 20px; box-sizing: border-box; z-index: 9999; overflow: auto; }
   #fallback-error.show { display: block; }
   #fallback-error h2 { color: #D9463D; font-size: 17px; margin: 0 0 10px; }
-  #fallback-error pre {
-    background: #161B20; border: 1px solid #D9463D55; border-radius: 8px; padding: 12px;
-    font-size: 11.5px; color: #e08a84; white-space: pre-wrap; word-break: break-word;
-  }
+  #fallback-error pre { background: #161B20; border: 1px solid #D9463D55; border-radius: 8px; padding: 12px; font-size: 11.5px; color: #e08a84; white-space: pre-wrap; word-break: break-word; }
   #fallback-error p { color: #7C8791; font-size: 12px; }
 </style>
 </head>
 <body>
 <script>
-  window.addEventListener("error", function (e) {
-    showFallbackError((e.error && e.error.message) || e.message || "Unknown error");
-  });
-  window.addEventListener("unhandledrejection", function (e) {
-    showFallbackError((e.reason && e.reason.message) || String(e.reason) || "Unknown error");
-  });
-  function showFallbackError(msg) {
-    var el = document.getElementById("fallback-error");
-    if (!el) return;
-    document.getElementById("fallback-error-msg").textContent = msg;
-    el.classList.add("show");
-  }
+  window.addEventListener("error", function (e) { showFallbackError((e.error && e.error.message) || e.message || "Unknown error"); });
+  window.addEventListener("unhandledrejection", function (e) { showFallbackError((e.reason && e.reason.message) || String(e.reason) || "Unknown error"); });
+  function showFallbackError(msg) { var el = document.getElementById("fallback-error"); if (!el) return; document.getElementById("fallback-error-msg").textContent = msg; el.classList.add("show"); }
 </script>
-<div id="fallback-error">
-  <h2>BKK-TEAMS couldn't load</h2>
-  <pre id="fallback-error-msg"></pre>
-  <p>Screenshot this and send it back — it tells us exactly what broke.</p>
-</div>
-<div id="root">
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif;color:#7C8791;font-size:13px;">
-    Loading BKK-TEAMS…
-  </div>
-</div>
+<div id="fallback-error"><h2>BKK-TEAMS couldn't load</h2><pre id="fallback-error-msg"></pre><p>Screenshot this and send it back — it tells us exactly what broke.</p></div>
+<div id="root"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif;color:#7C8791;font-size:13px;">Loading BKK-TEAMS…</div></div>
 <script type="module">
 import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
@@ -835,7 +812,7 @@ function DispatchScreen({
       fontWeight: 600,
       color: "#F2F5F6"
     }
-  }, "Up Next (", upNext.length, ")"), /*#__PURE__*/React.createElement(ChevronRight, {
+  }, "Tasked (", upNext.length, ")"), /*#__PURE__*/React.createElement(ChevronRight, {
     size: 16,
     color: "#7C8791"
   })));
@@ -897,20 +874,20 @@ function QueueScreen({
       color: "#F2F5F6",
       marginBottom: 2
     }
-  }, "Up Next"), /*#__PURE__*/React.createElement("div", {
+  }, "Tasked"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "Inter, sans-serif",
       fontSize: 12.5,
       color: "#7C8791",
       marginBottom: 16
     }
-  }, "Tap a job to make it primary — it'll appear on Dispatch."), upNext.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, "Tap a job to make it primary. Not possible while another job is EN ROUTE or ONSITE."), upNext.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "Inter, sans-serif",
       fontSize: 12.5,
       color: "#5c6771"
     }
-  }, "Nothing else queued.") : /*#__PURE__*/React.createElement("div", {
+  }, "Nothing else tasked.") : /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
