@@ -17,13 +17,6 @@
     margin: 0; padding: 0; background: #05070a;
     height: 100%; overflow: hidden; overscroll-behavior: none;
   }
-  /* The app shell now genuinely fills the entire screen on any
-     device -- no artificial cap here. Individual components (the
-     Dispatch card, Header row, bottom nav row) each center their own
-     readable content at a sensible max-width internally, so the
-     dark app background always reaches every edge of the screen,
-     and only the actual text/buttons avoid becoming absurdly wide
-     on a big monitor. */
   #root {
     height: 100%; width: 100%;
     background: #05070a;
@@ -567,8 +560,6 @@ function DispatchScreen({
       display: "flex",
       flexDirection: "column",
       padding: "clamp(14px, 2.5vw, 32px)",
-      maxWidth: 1000,
-      margin: "0 auto",
       boxSizing: "border-box"
     }
   }, !activeJob ? /*#__PURE__*/React.createElement("div", {
@@ -657,7 +648,7 @@ function DispatchScreen({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(2, 1fr)",
+      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
       gap: "clamp(10px, 1.4vw, 20px)",
       marginBottom: 12
     }
@@ -1942,8 +1933,6 @@ function Header({
       alignItems: "center",
       justifyContent: "space-between",
       padding: "clamp(10px, 1.4vw, 18px) clamp(14px, 2.2vw, 32px)",
-      maxWidth: 1000,
-      margin: "0 auto",
       boxSizing: "border-box"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2048,9 +2037,7 @@ function BottomNav({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
-      maxWidth: 1000,
-      margin: "0 auto"
+      display: "flex"
     }
   }, tabs.map(t => {
     const active = tab === t.id;
