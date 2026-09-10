@@ -64,7 +64,7 @@
 <script type="module">
 import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-import { Truck, Navigation, Users, ClipboardList, CheckCircle2, ChevronRight, X, Plus, MapPin, Phone, RefreshCw, ArrowLeft, Star, Trash2, LayoutGrid, Layers, Camera } from "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1";
+import { Truck, Navigation, Users, ClipboardList, CheckCircle2, ChevronRight, X, Plus, MapPin, Phone, RefreshCw, ArrowLeft, Star, Trash2, LayoutGrid, Layers } from "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1";
 
 // ---------------------------------------------------------------
 // CONSTANTS -- mirrors bkk_server.js exactly.
@@ -166,14 +166,16 @@ function formatTime(iso) {
 // ---------------------------------------------------------------
 // SERVER CONNECTION -- same proven pattern as BKK-Incidents.
 // ---------------------------------------------------------------
+// Hardcoded to match every other app in this system (BKK-Incidents,
+// beacon-site) -- this used to be user-configurable back when testing
+// happened over ngrok tunnels, but now that the backend lives at a
+// permanent address, letting it be typed in was just a way for a
+// vehicle to accidentally end up talking to the wrong backend, where
+// nothing else -- including beacon.bankstownses.com -- would see
+// anything it uploaded.
+const SERVER_URL = "https://api.bankstownses.com";
 function useServerUrl() {
-  const [url, setUrlState] = useState(() => localStorage.getItem("bkk_server_url") || "");
-  const setUrl = u => {
-    const cleaned = u.trim().toLowerCase().replace(/\/$/, "");
-    localStorage.setItem("bkk_server_url", cleaned);
-    setUrlState(cleaned);
-  };
-  return [url, setUrl];
+  return [SERVER_URL, () => {}];
 }
 function useServerState(serverUrl) {
   const [state, setState] = useState(null);
@@ -382,124 +384,6 @@ function ConnectionBanner({
 }
 
 // ---------------------------------------------------------------
-// CONNECT SCREEN
-// ---------------------------------------------------------------
-function ConnectScreen({
-  onConnected
-}) {
-  const [input, setInput] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [error, setError] = useState(null);
-  const tryConnect = async () => {
-    const cleaned = input.trim().toLowerCase().replace(/\/$/, "");
-    if (!cleaned) return;
-    setTesting(true);
-    setError(null);
-    try {
-      if (!/^https?:\/\//i.test(cleaned)) {
-        throw new Error("URL must start with https:// (or http:// for a local address)");
-      }
-      const res = await fetch(`${cleaned}/health`, {
-        headers: {
-          "ngrok-skip-browser-warning": "true"
-        }
-      });
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        throw new Error(`Got a response, but it wasn't from the server (content-type: "${contentType}"). Usually means ngrok's browser warning got in the way, or the URL/port is wrong.`);
-      }
-      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-      onConnected(cleaned);
-    } catch (e) {
-      if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
-        setError("Couldn't connect at all — check that bkk_server.js is running and that you copied the https:// forwarding URL exactly.");
-      } else {
-        setError(e.message);
-      }
-    } finally {
-      setTesting(false);
-    }
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      minHeight: "100vh",
-      background: "#05070a",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 24,
-      boxSizing: "border-box"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 44,
-      height: 44,
-      borderRadius: 10,
-      background: "#2F8FD122",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 16
-    }
-  }, /*#__PURE__*/React.createElement(Truck, {
-    size: 22,
-    color: "#2F8FD1"
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "Oswald, sans-serif",
-      fontSize: 22,
-      fontWeight: 600,
-      color: "#F2F5F6",
-      marginBottom: 4
-    }
-  }, "BKK-TEAMS"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "Inter, sans-serif",
-      fontSize: 13,
-      color: "#7C8791",
-      marginBottom: 28,
-      textAlign: "center"
-    }
-  }, "Enter the server address to connect"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: "100%",
-      maxWidth: 340
-    }
-  }, /*#__PURE__*/React.createElement(FieldLabel, {
-    label: "Server URL"
-  }), /*#__PURE__*/React.createElement(TextInput, {
-    value: input,
-    onChange: setInput,
-    placeholder: "https://xxxx.ngrok-free.dev",
-    noAutoStuff: true
-  }), error && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 10,
-      fontFamily: "Inter, sans-serif",
-      fontSize: 12,
-      color: "#e08a84"
-    }
-  }, error), /*#__PURE__*/React.createElement("button", {
-    onClick: tryConnect,
-    disabled: testing || !input.trim(),
-    style: {
-      width: "100%",
-      marginTop: 16,
-      background: input.trim() ? "#2F8FD1" : "#1f2b33",
-      border: "none",
-      borderRadius: 8,
-      color: input.trim() ? "#0d1114" : "#7C8791",
-      fontFamily: "Oswald, sans-serif",
-      fontWeight: 600,
-      fontSize: 14,
-      padding: "13px 0",
-      cursor: input.trim() ? "pointer" : "not-allowed"
-    }
-  }, testing ? "Connecting…" : "Connect")));
-}
-
-// ---------------------------------------------------------------
 // PHOTOS -- upload/thumbnail-grid/delete, connected to the same
 // backend endpoint the beacon-site Incident Details page uses. Images
 // are resized in-browser before upload so a full phone photo doesn't
@@ -531,6 +415,7 @@ function resizeImageFile(file, maxDim, quality) {
 }
 function PhotosSection({ incident, serverUrl, dispatch }) {
   const [uploading, setUploading] = useState(false);
+  const [showGrid, setShowGrid] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
   const photos = Array.isArray(incident.photos) ? incident.photos : [];
@@ -560,93 +445,52 @@ function PhotosSection({ incident, serverUrl, dispatch }) {
 
   return /*#__PURE__*/React.createElement("div", { style: { marginTop: 12 } },
     error && /*#__PURE__*/React.createElement("div", { style: { color: "#e08a84", fontSize: 12, fontFamily: "Inter, sans-serif", marginBottom: 8 } }, error),
-    /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 } },
-      photos.map((p) => /*#__PURE__*/React.createElement("div", { key: p.id, style: { position: "relative", width: 96, height: 96 } },
-        /*#__PURE__*/React.createElement("a", { href: `${serverUrl}/photo/${p.id}`, target: "_blank", rel: "noopener noreferrer" },
-          /*#__PURE__*/React.createElement("img", {
-            src: `${serverUrl}/photo/${p.id}`, alt: p.filename,
-            style: { width: 96, height: 96, objectFit: "cover", borderRadius: 6, border: "1px solid #2E373F", display: "block" }
-          })
-        ),
-        /*#__PURE__*/React.createElement("button", {
-          onClick: () => deletePhoto(p.id), title: "Delete photo",
-          style: {
-            position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%",
-            background: "#D9463D", color: "#fff", border: "none", cursor: "pointer",
-            fontSize: 12, lineHeight: "20px", padding: 0, fontFamily: "Inter, sans-serif"
-          }
-        }, "\u00D7")
-      ))
-    ),
     /*#__PURE__*/React.createElement("input", {
       ref: fileInputRef, type: "file", accept: "image/*", onChange: onFileChosen, style: { display: "none" }
     }),
-    /*#__PURE__*/React.createElement("button", {
-      onClick: () => fileInputRef.current && fileInputRef.current.click(),
-      disabled: uploading,
-      style: {
-        width: "100%", background: "#161B20", border: "1px solid #2E373F", borderRadius: 8,
-        color: "#B7C0C8", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12.5,
-        padding: "10px 0", cursor: uploading ? "default" : "pointer"
-      }
-    }, uploading ? "Uploading…" : "+ Upload Photo")
+    /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: showGrid ? 10 : 0 } },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => fileInputRef.current && fileInputRef.current.click(),
+        disabled: uploading,
+        style: {
+          flex: 1, background: "#161B20", border: "1px solid #2E373F", borderRadius: 8,
+          color: "#B7C0C8", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12.5,
+          padding: "10px 0", cursor: uploading ? "default" : "pointer"
+        }
+      }, uploading ? "Uploading…" : "+ Upload Photo"),
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => setShowGrid((v) => !v),
+        style: {
+          flex: 1, background: showGrid ? "#2F8FD122" : "#161B20", border: showGrid ? "1px solid #2F8FD188" : "1px solid #2E373F",
+          borderRadius: 8, color: showGrid ? "#2F8FD1" : "#B7C0C8", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12.5,
+          padding: "10px 0", cursor: "pointer"
+        }
+      }, showGrid ? "Hide Photos" : `View Photos${photos.length > 0 ? ` (${photos.length})` : ""}`)
+    ),
+    showGrid && (photos.length === 0
+      ? /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 12.5, color: "#5c6771" } }, "No photos uploaded yet.")
+      : /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
+          photos.map((p) => /*#__PURE__*/React.createElement("div", { key: p.id, style: { position: "relative", width: 96, height: 96 } },
+            /*#__PURE__*/React.createElement("a", { href: `${serverUrl}/photo/${p.id}`, target: "_blank", rel: "noopener noreferrer" },
+              /*#__PURE__*/React.createElement("img", {
+                src: `${serverUrl}/photo/${p.id}`, alt: p.filename,
+                style: { width: 96, height: 96, objectFit: "cover", borderRadius: 6, border: "1px solid #2E373F", display: "block" }
+              })
+            ),
+            /*#__PURE__*/React.createElement("button", {
+              onClick: () => deletePhoto(p.id), title: "Delete photo",
+              style: {
+                position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%",
+                background: "#D9463D", color: "#fff", border: "none", cursor: "pointer",
+                fontSize: 12, lineHeight: "20px", padding: 0, fontFamily: "Inter, sans-serif"
+              }
+            }, "\u00D7")
+          ))
+        )
+    )
   );
 }
 
-function PhotosScreen({
-  vehicleId,
-  state,
-  dispatch,
-  serverUrl
-}) {
-  const activeJob = state.vehicleStates[vehicleId].activeJob;
-  if (!activeJob) {
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: 16,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "60vh"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontFamily: "Inter, sans-serif",
-        fontSize: 13,
-        color: "#5c6771",
-        textAlign: "center"
-      }
-    }, "No active tasking.", /*#__PURE__*/React.createElement("br", null), "Set one as primary on the Dispatch tab to attach photos."));
-  }
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "16px 16px 24px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "Oswald, sans-serif",
-      fontSize: 20,
-      fontWeight: 600,
-      color: "#F2F5F6",
-      marginBottom: 2,
-      marginTop: 4
-    }
-  }, "Photos"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "Inter, sans-serif",
-      fontSize: 12.5,
-      color: "#7C8791",
-      marginBottom: 16,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
-  }, activeJob.type, " — ", activeJob.addr), /*#__PURE__*/React.createElement(PhotosSection, {
-    incident: activeJob,
-    serverUrl: serverUrl,
-    dispatch: dispatch
-  }));
-}
 
 // ---------------------------------------------------------------
 // ---------------------------------------------------------------
@@ -655,7 +499,8 @@ function PhotosScreen({
 function DispatchScreen({
   vehicleId,
   state,
-  dispatch
+  dispatch,
+  serverUrl
 }) {
   const [callOffReason, setCallOffReason] = useState("");
   const [showCallOff, setShowCallOff] = useState(false);
@@ -791,7 +636,11 @@ function DispatchScreen({
     style: {
       marginLeft: 4
     }
-  }), " ", activeJob.callersNumber)), /*#__PURE__*/React.createElement("div", {
+  }), " ", activeJob.callersNumber)), /*#__PURE__*/React.createElement(PhotosSection, {
+    incident: activeJob,
+    serverUrl: serverUrl,
+    dispatch: dispatch
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
     }
@@ -2065,8 +1914,7 @@ function useClock() {
 function Header({
   vehicleId,
   state,
-  onLogOut,
-  onChangeServer
+  onLogOut
 }) {
   const now = useClock();
   const st = state.vehicleStates[vehicleId].teamStatus;
@@ -2120,19 +1968,6 @@ function Header({
       color: "#B7C0C8"
     }
   }, formatTime(now.toISOString())), /*#__PURE__*/React.createElement("button", {
-    onClick: onChangeServer,
-    style: {
-      background: "none",
-      border: "1px solid #2E373F",
-      borderRadius: 6,
-      color: "#7C8791",
-      fontFamily: "Inter, sans-serif",
-      fontSize: "clamp(10px, 1.1vw, 14px)",
-      fontWeight: 600,
-      padding: "clamp(4px, 0.6vw, 8px) clamp(8px, 1vw, 14px)",
-      cursor: "pointer"
-    }
-  }, "Change server"), /*#__PURE__*/React.createElement("button", {
     onClick: onLogOut,
     style: {
       background: "none",
@@ -2167,10 +2002,6 @@ function BottomNav({
     id: "map",
     label: "Map",
     icon: Navigation
-  }, {
-    id: "photos",
-    label: "Photos",
-    icon: Camera
   }, {
     id: "team",
     label: "Team",
@@ -2427,9 +2258,6 @@ function App() {
       }
     }, "Redirecting to login…"));
   }
-  if (!serverUrl) return /*#__PURE__*/React.createElement(ConnectScreen, {
-    onConnected: setServerUrl
-  });
   if (!state) {
     return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -2477,8 +2305,7 @@ function App() {
   }, pushStatus === "denied" ? "Notifications are blocked — enable them in your browser/phone settings to get alerted when this app isn't open." : "This browser doesn't support push notifications — you'll only see taskings while the app is open."), /*#__PURE__*/React.createElement(Header, {
     vehicleId: vehicleId,
     state: state,
-    onLogOut: logOut,
-    onChangeServer: () => setServerUrl("")
+    onLogOut: logOut
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
@@ -2498,11 +2325,6 @@ function App() {
   }), tab === "map" && /*#__PURE__*/React.createElement(MapScreen, {
     vehicleId: vehicleId,
     state: state
-  }), tab === "photos" && /*#__PURE__*/React.createElement(PhotosScreen, {
-    vehicleId: vehicleId,
-    state: state,
-    dispatch: dispatch,
-    serverUrl: serverUrl
   }), tab === "team" && /*#__PURE__*/React.createElement(TeamScreen, {
     vehicleId: vehicleId,
     state: state,
