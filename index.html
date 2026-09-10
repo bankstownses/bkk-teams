@@ -64,7 +64,7 @@
 <script type="module">
 import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-import { Truck, Navigation, Users, ClipboardList, CheckCircle2, ChevronRight, X, Plus, MapPin, Phone, RefreshCw, ArrowLeft, Star, Trash2, LayoutGrid, Layers } from "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1";
+import { Truck, Navigation, Users, ClipboardList, CheckCircle2, ChevronRight, X, Plus, MapPin, Phone, RefreshCw, ArrowLeft, Star, Trash2, LayoutGrid, Layers, Camera } from "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1";
 
 // ---------------------------------------------------------------
 // CONSTANTS -- mirrors bkk_server.js exactly.
@@ -559,14 +559,13 @@ function PhotosSection({ incident, serverUrl, dispatch }) {
   };
 
   return /*#__PURE__*/React.createElement("div", { style: { marginTop: 12 } },
-    /*#__PURE__*/React.createElement(FieldLabel, { label: "Photos" }),
     error && /*#__PURE__*/React.createElement("div", { style: { color: "#e08a84", fontSize: 12, fontFamily: "Inter, sans-serif", marginBottom: 8 } }, error),
     /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 } },
-      photos.map((p) => /*#__PURE__*/React.createElement("div", { key: p.id, style: { position: "relative", width: 68, height: 68 } },
+      photos.map((p) => /*#__PURE__*/React.createElement("div", { key: p.id, style: { position: "relative", width: 96, height: 96 } },
         /*#__PURE__*/React.createElement("a", { href: `${serverUrl}/photo/${p.id}`, target: "_blank", rel: "noopener noreferrer" },
           /*#__PURE__*/React.createElement("img", {
             src: `${serverUrl}/photo/${p.id}`, alt: p.filename,
-            style: { width: 68, height: 68, objectFit: "cover", borderRadius: 6, border: "1px solid #2E373F", display: "block" }
+            style: { width: 96, height: 96, objectFit: "cover", borderRadius: 6, border: "1px solid #2E373F", display: "block" }
           })
         ),
         /*#__PURE__*/React.createElement("button", {
@@ -594,6 +593,61 @@ function PhotosSection({ incident, serverUrl, dispatch }) {
   );
 }
 
+function PhotosScreen({
+  vehicleId,
+  state,
+  dispatch,
+  serverUrl
+}) {
+  const activeJob = state.vehicleStates[vehicleId].activeJob;
+  if (!activeJob) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: 16,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "60vh"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontFamily: "Inter, sans-serif",
+        fontSize: 13,
+        color: "#5c6771",
+        textAlign: "center"
+      }
+    }, "No active tasking.", /*#__PURE__*/React.createElement("br", null), "Set one as primary on the Dispatch tab to attach photos."));
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "16px 16px 24px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "Oswald, sans-serif",
+      fontSize: 20,
+      fontWeight: 600,
+      color: "#F2F5F6",
+      marginBottom: 2,
+      marginTop: 4
+    }
+  }, "Photos"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "Inter, sans-serif",
+      fontSize: 12.5,
+      color: "#7C8791",
+      marginBottom: 16,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, activeJob.type, " — ", activeJob.addr), /*#__PURE__*/React.createElement(PhotosSection, {
+    incident: activeJob,
+    serverUrl: serverUrl,
+    dispatch: dispatch
+  }));
+}
+
 // ---------------------------------------------------------------
 // ---------------------------------------------------------------
 // DISPATCH SCREEN
@@ -601,8 +655,7 @@ function PhotosSection({ incident, serverUrl, dispatch }) {
 function DispatchScreen({
   vehicleId,
   state,
-  dispatch,
-  serverUrl
+  dispatch
 }) {
   const [callOffReason, setCallOffReason] = useState("");
   const [showCallOff, setShowCallOff] = useState(false);
@@ -738,11 +791,7 @@ function DispatchScreen({
     style: {
       marginLeft: 4
     }
-  }), " ", activeJob.callersNumber)), /*#__PURE__*/React.createElement(PhotosSection, {
-    incident: activeJob,
-    serverUrl: serverUrl,
-    dispatch: dispatch
-  }), /*#__PURE__*/React.createElement("div", {
+  }), " ", activeJob.callersNumber)), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
     }
@@ -2119,6 +2168,10 @@ function BottomNav({
     label: "Map",
     icon: Navigation
   }, {
+    id: "photos",
+    label: "Photos",
+    icon: Camera
+  }, {
     id: "team",
     label: "Team",
     icon: Users
@@ -2445,6 +2498,11 @@ function App() {
   }), tab === "map" && /*#__PURE__*/React.createElement(MapScreen, {
     vehicleId: vehicleId,
     state: state
+  }), tab === "photos" && /*#__PURE__*/React.createElement(PhotosScreen, {
+    vehicleId: vehicleId,
+    state: state,
+    dispatch: dispatch,
+    serverUrl: serverUrl
   }), tab === "team" && /*#__PURE__*/React.createElement(TeamScreen, {
     vehicleId: vehicleId,
     state: state,
