@@ -496,6 +496,78 @@ function PhotosSection({ incident, serverUrl, dispatch }) {
 // ---------------------------------------------------------------
 // DISPATCH SCREEN
 // ---------------------------------------------------------------
+function AttachProviderButton({ incident, dispatch }) {
+  const [open, setOpen] = useState(false);
+  const [agency, setAgency] = useState("");
+  const [reference, setReference] = useState("");
+  const [details, setDetails] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const reset = () => { setOpen(false); setAgency(""); setReference(""); setDetails(""); setError(null); };
+
+  const save = async () => {
+    if (!agency.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await dispatch("ATTACH_PROVIDER", { incidentId: incident.id, agency: agency.trim(), reference: reference.trim(), details: details.trim() });
+      reset();
+    } catch (err) {
+      setError(err.message || "Failed to attach provider");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return /*#__PURE__*/React.createElement("div", { style: { marginTop: 12 } },
+    /*#__PURE__*/React.createElement("button", {
+      onClick: () => setOpen((o) => !o),
+      style: {
+        width: "100%", background: "#161B20", border: "1px solid #2E373F", borderRadius: 8,
+        color: "#B7C0C8", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12.5,
+        padding: "10px 0", cursor: "pointer"
+      }
+    }, open ? "Cancel Attach Provider" : "+ Attach Provider"),
+    open && /*#__PURE__*/React.createElement("div", { style: { marginTop: 10, background: "#0d1114", border: "1px solid #2F8FD144", borderRadius: 8, padding: 12 } },
+      error && /*#__PURE__*/React.createElement("div", { style: { color: "#e08a84", fontSize: 12, fontFamily: "Inter, sans-serif", marginBottom: 8 } }, error),
+      /*#__PURE__*/React.createElement(FieldLabel, { label: "Agency/Company" }),
+      /*#__PURE__*/React.createElement(TextInput, { value: agency, onChange: setAgency, placeholder: "Agency / Provider Name" }),
+      /*#__PURE__*/React.createElement("div", { style: { height: 10 } }),
+      /*#__PURE__*/React.createElement(FieldLabel, { label: "Reference", optional: true }),
+      /*#__PURE__*/React.createElement(TextInput, { value: reference, onChange: setReference, placeholder: "Agency / Provider Reference" }),
+      /*#__PURE__*/React.createElement("div", { style: { height: 10 } }),
+      /*#__PURE__*/React.createElement(FieldLabel, { label: "Details", optional: true }),
+      /*#__PURE__*/React.createElement("textarea", {
+        value: details, onChange: (e) => setDetails(e.target.value), rows: 2,
+        style: {
+          width: "100%", background: "#161B20", border: "1px solid #2E373F", borderRadius: 8,
+          padding: "9px 11px", color: "#F2F5F6", fontFamily: "Inter, sans-serif", fontSize: 13,
+          outline: "none", resize: "none", boxSizing: "border-box", marginBottom: 10
+        }
+      }),
+      /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8 } },
+        /*#__PURE__*/React.createElement("button", {
+          onClick: reset,
+          style: {
+            flex: 1, background: "#161B20", border: "1px solid #2E373F", borderRadius: 8,
+            color: "#B7C0C8", fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 12.5,
+            padding: "9px 0", cursor: "pointer"
+          }
+        }, "Cancel"),
+        /*#__PURE__*/React.createElement("button", {
+          onClick: save, disabled: !agency.trim() || saving,
+          style: {
+            flex: 2, background: agency.trim() ? "#2F8FD1" : "#1f2b33", border: "none", borderRadius: 8,
+            color: agency.trim() ? "#0d1114" : "#5c6771", fontFamily: "Oswald, sans-serif", fontWeight: 600,
+            fontSize: 12.5, padding: "9px 0", cursor: agency.trim() ? "pointer" : "not-allowed"
+          }
+        }, saving ? "Saving…" : "Save Provider")
+      )
+    )
+  );
+}
+
 function DispatchScreen({
   vehicleId,
   state,
@@ -639,6 +711,9 @@ function DispatchScreen({
   }), " ", activeJob.callersNumber)), /*#__PURE__*/React.createElement(PhotosSection, {
     incident: activeJob,
     serverUrl: serverUrl,
+    dispatch: dispatch
+  }), /*#__PURE__*/React.createElement(AttachProviderButton, {
+    incident: activeJob,
     dispatch: dispatch
   }), /*#__PURE__*/React.createElement("div", {
     style: {
