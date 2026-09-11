@@ -669,6 +669,7 @@ function ProviderControls({ incident, providers, state, dispatch }) {
   const [modal, setModal] = useState(null); // { type, provider }
 
   const reset = () => { setOpen(false); setAgency(""); setReference(""); setDetails(""); setError(null); };
+  const visibleProviders = providers.filter((p) => p.status !== "Cancelled");
   const openModal = (type, provider) => setModal({ type, provider: { ...provider, incidentId: incident.id } });
   const closeModal = () => setModal(null);
 
@@ -718,14 +719,14 @@ function ProviderControls({ incident, providers, state, dispatch }) {
           padding: "10px 0", cursor: "pointer"
         }
       }, open ? "Cancel Attach Provider" : "+ Attach Provider"),
-      providers.length > 0 && /*#__PURE__*/React.createElement("button", {
+      visibleProviders.length > 0 && /*#__PURE__*/React.createElement("button", {
         onClick: () => setShowList((v) => !v),
         style: {
           flex: 1, background: showList ? "#2F8FD122" : "#161B20", border: showList ? "1px solid #2F8FD188" : "1px solid #2E373F",
           borderRadius: 8, color: showList ? "#2F8FD1" : "#B7C0C8", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12.5,
           padding: "10px 0", cursor: "pointer"
         }
-      }, showList ? "Hide Providers" : `View Providers (${providers.length})`)
+      }, showList ? "Hide Providers" : `View Providers (${visibleProviders.length})`)
     ),
     open && /*#__PURE__*/React.createElement("div", { style: { marginTop: 10, background: "#0d1114", border: "1px solid #2F8FD144", borderRadius: 8, padding: 12 } },
       error && /*#__PURE__*/React.createElement("div", { style: { color: "#e08a84", fontSize: 12, fontFamily: "Inter, sans-serif", marginBottom: 8 } }, error),
@@ -763,8 +764,8 @@ function ProviderControls({ incident, providers, state, dispatch }) {
         }, saving ? "Saving…" : "Save Provider")
       )
     ),
-    showList && providers.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginTop: 10, display: "flex", flexDirection: "column", gap: 8 } },
-      providers.map((p) => {
+    showList && visibleProviders.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginTop: 10, display: "flex", flexDirection: "column", gap: 8 } },
+      visibleProviders.map((p) => {
         return /*#__PURE__*/React.createElement("div", { key: p.id, style: { background: "#161B20", border: "1px solid #2E373F", borderRadius: 8, padding: "10px 12px" } },
           /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Oswald, sans-serif", fontSize: 13.5, fontWeight: 600, color: "#F2F5F6", marginBottom: 2 } },
             p.agency, p.reference ? ` (ref: ${p.reference})` : ""
@@ -773,7 +774,7 @@ function ProviderControls({ incident, providers, state, dispatch }) {
           /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
             PROVIDER_STATUS_ORDER.map((status) => {
               const btn = statusButtonProps(p, status);
-              return /*#__PURE__*/React.createElement("button", { key: status, style: btn.style, disabled: btn.disabled, onClick: btn.onClick }, status);
+              return /*#__PURE__*/React.createElement("button", { key: status, style: btn.style, disabled: btn.disabled, onClick: btn.onClick }, status === "Cancelled" ? "Cancel" : status);
             })
           )
         );
