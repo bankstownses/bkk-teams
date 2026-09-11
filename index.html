@@ -496,8 +496,16 @@ function PhotosSection({ incident, serverUrl, dispatch }) {
 // ---------------------------------------------------------------
 // DISPATCH SCREEN
 // ---------------------------------------------------------------
-function AttachProviderButton({ incident, dispatch }) {
+const PROVIDER_STATUS_COLORS = {
+  Requested: "#7C8791",
+  Referred: "#E8B23C",
+  Complete: "#3FA34D",
+  Cancelled: "#D9463D",
+};
+
+function ProviderControls({ incident, providers, dispatch }) {
   const [open, setOpen] = useState(false);
+  const [showList, setShowList] = useState(false);
   const [agency, setAgency] = useState("");
   const [reference, setReference] = useState("");
   const [details, setDetails] = useState("");
@@ -521,14 +529,24 @@ function AttachProviderButton({ incident, dispatch }) {
   };
 
   return /*#__PURE__*/React.createElement("div", { style: { marginTop: 12 } },
-    /*#__PURE__*/React.createElement("button", {
-      onClick: () => setOpen((o) => !o),
-      style: {
-        width: "100%", background: "#161B20", border: "1px solid #2E373F", borderRadius: 8,
-        color: "#B7C0C8", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12.5,
-        padding: "10px 0", cursor: "pointer"
-      }
-    }, open ? "Cancel Attach Provider" : "+ Attach Provider"),
+    /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8 } },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => setOpen((o) => !o),
+        style: {
+          flex: 1, background: "#161B20", border: "1px solid #2E373F", borderRadius: 8,
+          color: "#B7C0C8", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12.5,
+          padding: "10px 0", cursor: "pointer"
+        }
+      }, open ? "Cancel Attach Provider" : "+ Attach Provider"),
+      providers.length > 0 && /*#__PURE__*/React.createElement("button", {
+        onClick: () => setShowList((v) => !v),
+        style: {
+          flex: 1, background: showList ? "#2F8FD122" : "#161B20", border: showList ? "1px solid #2F8FD188" : "1px solid #2E373F",
+          borderRadius: 8, color: showList ? "#2F8FD1" : "#B7C0C8", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12.5,
+          padding: "10px 0", cursor: "pointer"
+        }
+      }, showList ? "Hide Providers" : `View Providers (${providers.length})`)
+    ),
     open && /*#__PURE__*/React.createElement("div", { style: { marginTop: 10, background: "#0d1114", border: "1px solid #2F8FD144", borderRadius: 8, padding: 12 } },
       error && /*#__PURE__*/React.createElement("div", { style: { color: "#e08a84", fontSize: 12, fontFamily: "Inter, sans-serif", marginBottom: 8 } }, error),
       /*#__PURE__*/React.createElement(FieldLabel, { label: "Agency/Company" }),
@@ -564,6 +582,25 @@ function AttachProviderButton({ incident, dispatch }) {
           }
         }, saving ? "Saving…" : "Save Provider")
       )
+    ),
+    showList && providers.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginTop: 10, display: "flex", flexDirection: "column", gap: 8 } },
+      providers.map((p) => {
+        const color = PROVIDER_STATUS_COLORS[p.status] || "#7C8791";
+        return /*#__PURE__*/React.createElement("div", { key: p.id, style: { background: "#161B20", border: "1px solid #2E373F", borderRadius: 8, padding: "10px 12px" } },
+          /*#__PURE__*/React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 2 } },
+            /*#__PURE__*/React.createElement("span", { style: { fontFamily: "Oswald, sans-serif", fontSize: 13.5, fontWeight: 600, color: "#F2F5F6" } },
+              p.agency, p.reference ? ` (ref: ${p.reference})` : ""
+            ),
+            /*#__PURE__*/React.createElement("span", {
+              style: {
+                fontFamily: "JetBrains Mono, monospace", fontSize: 10, fontWeight: 700, color,
+                background: `${color}22`, border: `1px solid ${color}55`, borderRadius: 5, padding: "2px 7px", flexShrink: 0
+              }
+            }, p.status.toUpperCase())
+          ),
+          p.details && /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 11.5, color: "#7C8791" } }, p.details)
+        );
+      })
     )
   );
 }
@@ -581,6 +618,7 @@ function DispatchScreen({
   const [busy, setBusy] = useState(false);
   const v = state.vehicleStates[vehicleId];
   const activeJob = v.activeJob;
+  const providers = (activeJob && state.incidentProviders?.[activeJob.id]) || [];
   const currentPhase = activeJob ? v.progress[activeJob.id]?.phase : null;
   const phaseIndex = PHASES.indexOf(currentPhase);
   const act = async fn => {
@@ -712,8 +750,9 @@ function DispatchScreen({
     incident: activeJob,
     serverUrl: serverUrl,
     dispatch: dispatch
-  }), /*#__PURE__*/React.createElement(AttachProviderButton, {
+  }), /*#__PURE__*/React.createElement(ProviderControls, {
     incident: activeJob,
+    providers: providers,
     dispatch: dispatch
   }), /*#__PURE__*/React.createElement("div", {
     style: {
