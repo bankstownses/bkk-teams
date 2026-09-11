@@ -496,6 +496,7 @@ function PhotosSection({ incident, serverUrl, dispatch }) {
 // ---------------------------------------------------------------
 // DISPATCH SCREEN
 // ---------------------------------------------------------------
+const PROVIDER_STATUS_ORDER = ["Requested", "Referred", "Complete", "Cancelled"];
 const PROVIDER_STATUS_COLORS = {
   Requested: "#7C8791",
   Referred: "#E8B23C",
@@ -503,7 +504,161 @@ const PROVIDER_STATUS_COLORS = {
   Cancelled: "#D9463D",
 };
 
-function ProviderControls({ incident, providers, dispatch }) {
+function hasActiveTeamsClient(state, incidentId) {
+  return Object.values(state.vehicleStates || {}).some((v) =>
+    (v.queue || []).some((j) => j.id === incidentId) || (v.incomingQueue || []).some((j) => j.id === incidentId)
+  );
+}
+function isoToLocalInput(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function localInputToIso(val) {
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+function ProviderModalShell({ title, children }) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 900, padding: 20, boxSizing: "border-box" }
+  },
+    /*#__PURE__*/React.createElement("div", {
+      style: { background: "#161B20", border: "1px solid #2E373F", borderRadius: 12, padding: 18, maxWidth: 420, width: "100%", maxHeight: "85vh", overflowY: "auto" }
+    },
+      /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Oswald, sans-serif", fontSize: 16, fontWeight: 700, color: "#F2F5F6", marginBottom: 14 } }, title),
+      children
+    )
+  );
+}
+function ProviderModalField({ label, children }) {
+  return /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
+    /*#__PURE__*/React.createElement(FieldLabel, { label }),
+    children
+  );
+}
+
+function CancelProviderModal({ provider, dispatch, onClose }) {
+  const [busy, setBusy] = useState(false);
+  const confirm = async () => {
+    setBusy(true);
+    try { await dispatch("CANCEL_PROVIDER", { incidentId: provider.incidentId, providerId: provider.id }); onClose(); }
+    finally { setBusy(false); }
+  };
+  return /*#__PURE__*/React.createElement(ProviderModalShell, { title: "Confirm Provider Cancellation" },
+    /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 13.5, color: "#B7C0C8", marginBottom: 16 } },
+      `Are you sure you want to cancel the provider: ${provider.agency}?`
+    ),
+    /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8 } },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: onClose,
+        style: { flex: 1, background: "#0d1114", border: "1px solid #2E373F", borderRadius: 8, color: "#B7C0C8", fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 12.5, padding: "10px 0", cursor: "pointer" }
+      }, "NO"),
+      /*#__PURE__*/React.createElement("button", {
+        onClick: confirm, disabled: busy,
+        style: { flex: 1, background: "#D9463D", border: "none", borderRadius: 8, color: "#fff", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 12.5, padding: "10px 0", cursor: "pointer" }
+      }, "YES")
+    )
+  );
+}
+
+function ReferProviderModal({ provider, dispatch, onClose }) {
+  const [note, setNote] = useState("");
+  const [timestamp, setTimestamp] = useState(isoToLocalInput());
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true);
+    try {
+      await dispatch("REFER_PROVIDER", { incidentId: provider.incidentId, providerId: provider.id, note, timestamp: localInputToIso(timestamp) });
+      onClose();
+    } finally { setBusy(false); }
+  };
+  return /*#__PURE__*/React.createElement(ProviderModalShell, { title: "Refer Incident | Provider" },
+    /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 13.5, fontWeight: 600, color: "#F2F5F6", marginBottom: 12 } },
+      provider.agency, provider.reference ? ` (ref: ${provider.reference})` : ""
+    ),
+    /*#__PURE__*/React.createElement(ProviderModalField, { label: "Details" },
+      /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 12.5, color: "#7C8791" } }, provider.details || "—")
+    ),
+    /*#__PURE__*/React.createElement(ProviderModalField, { label: "Note" },
+      /*#__PURE__*/React.createElement("textarea", {
+        value: note, onChange: (e) => setNote(e.target.value), rows: 3, placeholder: "Details here",
+        style: { width: "100%", background: "#0d1114", border: "1px solid #2E373F", borderRadius: 8, padding: "9px 11px", color: "#F2F5F6", fontFamily: "Inter, sans-serif", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }
+      })
+    ),
+    /*#__PURE__*/React.createElement(ProviderModalField, { label: "Timestamp" },
+      /*#__PURE__*/React.createElement("input", {
+        type: "datetime-local", value: timestamp, onChange: (e) => setTimestamp(e.target.value),
+        style: { width: "100%", background: "#0d1114", border: "1px solid #2E373F", borderRadius: 8, padding: "9px 11px", color: "#F2F5F6", fontFamily: "Inter, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" }
+      })
+    ),
+    /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 6 } },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: onClose,
+        style: { flex: 1, background: "#0d1114", border: "1px solid #2E373F", borderRadius: 8, color: "#B7C0C8", fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 12.5, padding: "10px 0", cursor: "pointer" }
+      }, "Cancel"),
+      /*#__PURE__*/React.createElement("button", {
+        onClick: submit, disabled: busy,
+        style: { flex: 2, background: "#2F8FD1", border: "none", borderRadius: 8, color: "#0d1114", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 12.5, padding: "10px 0", cursor: "pointer" }
+      }, busy ? "Referring…" : "Refer to Supplier")
+    )
+  );
+}
+
+function CompleteProviderModal({ incident, state, provider, dispatch, onClose }) {
+  const [details, setDetails] = useState("");
+  const [timestamp, setTimestamp] = useState(isoToLocalInput());
+  const [busy, setBusy] = useState(false);
+  const canCompleteIncident = !hasActiveTeamsClient(state, incident.id);
+
+  const completeProvider = async () => {
+    setBusy(true);
+    try { await dispatch("COMPLETE_PROVIDER", { incidentId: provider.incidentId, providerId: provider.id, details, timestamp: localInputToIso(timestamp) }); onClose(); }
+    finally { setBusy(false); }
+  };
+  const completeProviderAndIncident = async () => {
+    setBusy(true);
+    try { await dispatch("COMPLETE_PROVIDER_AND_INCIDENT", { incidentId: provider.incidentId, providerId: provider.id, details, timestamp: localInputToIso(timestamp) }); onClose(); }
+    finally { setBusy(false); }
+  };
+
+  return /*#__PURE__*/React.createElement(ProviderModalShell, { title: "Complete Provider | Incident" },
+    /*#__PURE__*/React.createElement(ProviderModalField, { label: "Agency / Company" },
+      /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 13, color: "#F2F5F6" } }, provider.agency)
+    ),
+    /*#__PURE__*/React.createElement(ProviderModalField, { label: "Reference" },
+      /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 13, color: "#F2F5F6" } }, provider.reference || "—")
+    ),
+    /*#__PURE__*/React.createElement(ProviderModalField, { label: "Details" },
+      /*#__PURE__*/React.createElement("textarea", {
+        value: details, onChange: (e) => setDetails(e.target.value), rows: 3, placeholder: "Details Here",
+        style: { width: "100%", background: "#0d1114", border: "1px solid #2E373F", borderRadius: 8, padding: "9px 11px", color: "#F2F5F6", fontFamily: "Inter, sans-serif", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }
+      })
+    ),
+    /*#__PURE__*/React.createElement(ProviderModalField, { label: "Timestamp" },
+      /*#__PURE__*/React.createElement("input", {
+        type: "datetime-local", value: timestamp, onChange: (e) => setTimestamp(e.target.value),
+        style: { width: "100%", background: "#0d1114", border: "1px solid #2E373F", borderRadius: 8, padding: "9px 11px", color: "#F2F5F6", fontFamily: "Inter, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" }
+      })
+    ),
+    /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 } },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: onClose,
+        style: { flex: 1, minWidth: 80, background: "#0d1114", border: "1px solid #2E373F", borderRadius: 8, color: "#B7C0C8", fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 12.5, padding: "10px 0", cursor: "pointer" }
+      }, "Cancel"),
+      /*#__PURE__*/React.createElement("button", {
+        onClick: completeProvider, disabled: busy,
+        style: { flex: 2, minWidth: 120, background: "#2F8FD1", border: "none", borderRadius: 8, color: "#0d1114", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 12.5, padding: "10px 0", cursor: "pointer" }
+      }, busy ? "Saving…" : "Complete Provider"),
+      canCompleteIncident && /*#__PURE__*/React.createElement("button", {
+        onClick: completeProviderAndIncident, disabled: busy,
+        style: { flex: "1 1 100%", background: "#3FA34D", border: "none", borderRadius: 8, color: "#0d1114", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 12.5, padding: "10px 0", cursor: "pointer" }
+      }, "Complete Provider & Incident")
+    )
+  );
+}
+
+function ProviderControls({ incident, providers, state, dispatch }) {
   const [open, setOpen] = useState(false);
   const [showList, setShowList] = useState(false);
   const [agency, setAgency] = useState("");
@@ -511,8 +666,11 @@ function ProviderControls({ incident, providers, dispatch }) {
   const [details, setDetails] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [modal, setModal] = useState(null); // { type, provider }
 
   const reset = () => { setOpen(false); setAgency(""); setReference(""); setDetails(""); setError(null); };
+  const openModal = (type, provider) => setModal({ type, provider: { ...provider, incidentId: incident.id } });
+  const closeModal = () => setModal(null);
 
   const save = async () => {
     if (!agency.trim()) return;
@@ -526,6 +684,28 @@ function ProviderControls({ incident, providers, dispatch }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const statusButtonProps = (provider, status) => {
+    const isCurrent = provider.status === status;
+    const terminal = provider.status === "Complete" || provider.status === "Cancelled";
+    const disabled = isCurrent || terminal;
+    const color = PROVIDER_STATUS_COLORS[status];
+    return {
+      style: {
+        padding: "6px 10px", borderRadius: 6, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10.5,
+        background: isCurrent ? color : "none", color: isCurrent ? "#0d1114" : (disabled ? "#5c6771" : color),
+        border: `1px solid ${isCurrent ? color : (disabled ? "#2E373F" : color + "88")}`,
+        cursor: disabled ? "default" : "pointer", opacity: disabled && !isCurrent ? 0.5 : 1,
+      },
+      disabled,
+      onClick: () => {
+        if (disabled) return;
+        if (status === "Cancelled") openModal("cancel", provider);
+        else if (status === "Referred") openModal("refer", provider);
+        else if (status === "Complete") openModal("complete", provider);
+      },
+    };
   };
 
   return /*#__PURE__*/React.createElement("div", { style: { marginTop: 12 } },
@@ -585,23 +765,23 @@ function ProviderControls({ incident, providers, dispatch }) {
     ),
     showList && providers.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginTop: 10, display: "flex", flexDirection: "column", gap: 8 } },
       providers.map((p) => {
-        const color = PROVIDER_STATUS_COLORS[p.status] || "#7C8791";
         return /*#__PURE__*/React.createElement("div", { key: p.id, style: { background: "#161B20", border: "1px solid #2E373F", borderRadius: 8, padding: "10px 12px" } },
-          /*#__PURE__*/React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 2 } },
-            /*#__PURE__*/React.createElement("span", { style: { fontFamily: "Oswald, sans-serif", fontSize: 13.5, fontWeight: 600, color: "#F2F5F6" } },
-              p.agency, p.reference ? ` (ref: ${p.reference})` : ""
-            ),
-            /*#__PURE__*/React.createElement("span", {
-              style: {
-                fontFamily: "JetBrains Mono, monospace", fontSize: 10, fontWeight: 700, color,
-                background: `${color}22`, border: `1px solid ${color}55`, borderRadius: 5, padding: "2px 7px", flexShrink: 0
-              }
-            }, p.status.toUpperCase())
+          /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Oswald, sans-serif", fontSize: 13.5, fontWeight: 600, color: "#F2F5F6", marginBottom: 2 } },
+            p.agency, p.reference ? ` (ref: ${p.reference})` : ""
           ),
-          p.details && /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 11.5, color: "#7C8791" } }, p.details)
+          p.details && /*#__PURE__*/React.createElement("div", { style: { fontFamily: "Inter, sans-serif", fontSize: 11.5, color: "#7C8791", marginBottom: 8 } }, p.details),
+          /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+            PROVIDER_STATUS_ORDER.map((status) => {
+              const btn = statusButtonProps(p, status);
+              return /*#__PURE__*/React.createElement("button", { key: status, style: btn.style, disabled: btn.disabled, onClick: btn.onClick }, status);
+            })
+          )
         );
       })
-    )
+    ),
+    modal?.type === "cancel" && /*#__PURE__*/React.createElement(CancelProviderModal, { provider: modal.provider, dispatch, onClose: closeModal }),
+    modal?.type === "refer" && /*#__PURE__*/React.createElement(ReferProviderModal, { provider: modal.provider, dispatch, onClose: closeModal }),
+    modal?.type === "complete" && /*#__PURE__*/React.createElement(CompleteProviderModal, { incident, state, provider: modal.provider, dispatch, onClose: closeModal })
   );
 }
 
@@ -753,6 +933,7 @@ function DispatchScreen({
   }), /*#__PURE__*/React.createElement(ProviderControls, {
     incident: activeJob,
     providers: providers,
+    state: state,
     dispatch: dispatch
   }), /*#__PURE__*/React.createElement("div", {
     style: {
