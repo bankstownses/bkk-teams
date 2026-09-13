@@ -43,6 +43,11 @@ const CAPABILITY_TYPES = ["FIELD-ACC", "FRL1-ACC", "FRL2-ACC", "FRL3-ACC", "FTL-
 const VAPID_PUBLIC_KEY = "BBIUJEzuGXw04DeSOEy_4Hrt1w8J54mEgaM-vBRZXLGZca5tZrRZlEglEHx-NnUS5_Sl43IlKj6Bw3ytACrxMuU";
 const LOGIN_URL = "https://login.bankstownses.com/";
 const COOKIE_DOMAIN = ".bankstownses.com";
+// Redirecting to the shared login page only makes sense once this app is
+// actually served from *.bankstownses.com in production -- on a preview,
+// dev, or any other domain there's no shared cookie to find, so bouncing
+// to the login page would just loop forever.
+const IS_PROD_HOST = process.env.NODE_ENV === "production" && typeof window !== "undefined" && window.location.hostname.endsWith("bankstownses.com");
 function getCookie(name) {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
@@ -72,7 +77,7 @@ function useLogin() {
   const logOut = () => {
     clearLoginCookies();
     setLoginState(null);
-    window.location.href = LOGIN_URL;
+    if (IS_PROD_HOST) window.location.href = LOGIN_URL;
   };
   return [login, logOut];
 }
@@ -2425,8 +2430,11 @@ function App() {
 
   // No login cookie -- there's no login form in this app anymore, so
   // send the person to the actual login page instead of showing one.
+  // Only do this once actually deployed to *.bankstownses.com; on a
+  // preview/dev domain there's no shared cookie to find, so redirecting
+  // would just bounce forever.
   useEffect(() => {
-    if (!login) window.location.href = LOGIN_URL;
+    if (!login && IS_PROD_HOST) window.location.href = LOGIN_URL;
   }, [login]);
 
   // Vibrate when a genuinely new tasking arrives (not just whenever the
