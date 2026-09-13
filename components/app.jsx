@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { Truck, Navigation, Users, ClipboardList, CheckCircle2, ChevronRight, X, Plus, MapPin, Phone, RefreshCw, ArrowLeft, Star, Trash2, LayoutGrid, Layers } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 
 // ---------------------------------------------------------------
@@ -41,45 +42,59 @@ const CAPABILITY_TYPES = ["FIELD-ACC", "FRL1-ACC", "FRL2-ACC", "FRL3-ACC", "FTL-
 // bkk_server.js exactly -- this is the public key, so embedding it in
 // client code is fine (that's how it's meant to be used).
 const VAPID_PUBLIC_KEY = "BBIUJEzuGXw04DeSOEy_4Hrt1w8J54mEgaM-vBRZXLGZca5tZrRZlEglEHx-NnUS5_Sl43IlKj6Bw3ytACrxMuU";
-const LOGIN_URL = "https://login.bankstownses.com/";
-const COOKIE_DOMAIN = ".bankstownses.com";
-// Redirecting to the shared login page only makes sense once this app is
-// actually served from *.bankstownses.com in production -- on a preview,
-// dev, or any other domain there's no shared cookie to find, so bouncing
-// to the login page would just loop forever.
-const IS_PROD_HOST = process.env.NODE_ENV === "production" && typeof window !== "undefined" && window.location.hostname.endsWith("bankstownses.com");
-function getCookie(name) {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-function clearLoginCookies() {
-  if (typeof document === "undefined") return;
-  ["bkk_username", "bkk_vehicle"].forEach(name => {
-    document.cookie = `${name}=; domain=${COOKIE_DOMAIN}; path=/; max-age=0`;
-  });
-}
 
-// Reads the login set by the separate login.bankstownses.com page (a
-// domain-wide cookie, since a subdomain's own storage isn't visible to
-// other subdomains). There's no login *screen* in this app anymore --
-// if the cookie's missing, the person gets sent to the login page
-// itself rather than seeing a form here.
+// Reads the signed-in crew member's identity from Supabase Auth, joined
+// with their vehicle/username stored in the `profiles` table. The
+// middleware/proxy layer already redirects anyone without a session to
+// /auth/login, so by the time this mounts a session should exist -- the
+// loading state just covers the brief window before that resolves.
 function useLogin() {
-  const [login, setLoginState] = useState(() => {
-    const vehicle = getCookie("bkk_vehicle");
-    const username = getCookie("bkk_username");
-    return vehicle ? {
-      vehicle,
-      username
-    } : null;
-  });
-  const logOut = () => {
-    clearLoginCookies();
-    setLoginState(null);
-    if (IS_PROD_HOST) window.location.href = LOGIN_URL;
+  const [login, setLogin] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+    async function loadProfile(userId) {
+      const {
+        data: profile
+      } = await supabase.from("profiles").select("username, vehicle").eq("id", userId).single();
+      if (active && profile) setLogin({
+        username: profile.username,
+        vehicle: profile.vehicle
+      });
+    }
+    supabase.auth.getSession().then(({
+      data: {
+        session
+      }
+    }) => {
+      if (!active) return;
+      if (session?.user) loadProfile(session.user.id);else setLoading(false);
+    });
+    const {
+      data: subscription
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      if (session?.user) loadProfile(session.user.id);else {
+        setLogin(null);
+        setLoading(false);
+      }
+    });
+    return () => {
+      active = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+  useEffect(() => {
+    if (login) setLoading(false);
+  }, [login]);
+  const logOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setLogin(null);
+    window.location.href = "/auth/login";
   };
-  return [login, logOut];
+  return [login, logOut, loading];
 }
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
@@ -2416,7 +2431,7 @@ function IncomingTaskingOverlay({
   }, busy ? "ACKNOWLEDGING…" : "TAP TO ACKNOWLEDGE"));
 }
 function App() {
-  const [login, logOut] = useLogin();
+  const [login, logOut, loginLoading] = useLogin();
   const [serverUrl, setServerUrl] = useServerUrl();
   const vehicleId = login?.vehicle || null;
   const {
@@ -2428,14 +2443,13 @@ function App() {
   const [tab, setTab] = useState("dispatch");
   const [pushStatus, setPushStatus] = useState(null); // null | "unsupported" | "denied" | "subscribed" | "error"
 
-  // No login cookie -- there's no login form in this app anymore, so
-  // send the person to the actual login page instead of showing one.
-  // Only do this once actually deployed to *.bankstownses.com; on a
-  // preview/dev domain there's no shared cookie to find, so redirecting
-  // would just bounce forever.
+  // The middleware/proxy layer already redirects unauthenticated visitors
+  // to /auth/login server-side. This is just a client-side fallback for
+  // the rare case where a session disappears (e.g. expired/revoked) while
+  // the app is already open.
   useEffect(() => {
-    if (!login && IS_PROD_HOST) window.location.href = LOGIN_URL;
-  }, [login]);
+    if (!loginLoading && !login) window.location.href = "/auth/login";
+  }, [loginLoading, login]);
 
   // Vibrate when a genuinely new tasking arrives (not just whenever the
   // overlay happens to be showing) -- computed safely before state/login
@@ -2500,7 +2514,7 @@ function App() {
         fontSize: 13,
         color: "#7C8791"
       }
-    }, "Redirecting to login…"));
+    }, loginLoading ? "Loading…" : "Redirecting to login…"));
   }
   if (!state) {
     return /*#__PURE__*/React.createElement("div", {
