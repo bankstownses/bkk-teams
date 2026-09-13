@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Inter", "Inter Fallback";
+  --font-heading: "Oswald", "Oswald Fallback";
+  --font-mono: "JetBrains Mono", "JetBrains Mono Fallback";
+  --color-background: #05070a;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #05070a;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#root-app {
+  height: 100%;
+  width: 100%;
+  background: #05070a;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+input,
+textarea,
+select {
+  font-size: 16px;
+}
