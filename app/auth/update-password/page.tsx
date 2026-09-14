@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -10,7 +10,27 @@ export default function UpdatePasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  // Starts true so the form never flashes before the reload check below runs.
+  const [isCheckingReload, setIsCheckingReload] = useState(true)
   const router = useRouter()
+
+  useEffect(() => {
+    // A hard refresh on this page must not let the same authenticated
+    // session sit here waiting — sign out and send the crew member back
+    // through login. Client-side navigation (arriving from the login page)
+    // is unaffected since its navigation "type" isn't "reload".
+    const [navigationEntry] = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[]
+
+    if (navigationEntry?.type === "reload") {
+      const supabase = createClient()
+      supabase.auth.signOut().finally(() => {
+        router.replace("/auth/login")
+      })
+      return
+    }
+
+    setIsCheckingReload(false)
+  }, [router])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -45,6 +65,14 @@ export default function UpdatePasswordPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isCheckingReload) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-background px-6">
+        <div className="font-sans text-xs text-muted-foreground">Signing you out…</div>
+      </div>
+    )
   }
 
   return (
