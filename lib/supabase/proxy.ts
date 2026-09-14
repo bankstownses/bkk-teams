@@ -47,6 +47,11 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = pathname.startsWith('/auth')
   const isUpdatePasswordRoute = pathname === '/auth/update-password'
   const isAssetRoute = pathname === '/sw.js' || pathname === '/manifest.webmanifest'
+  // API routes handle their own auth/authorization and return JSON, not a
+  // redirect-able HTML page — redirecting them here (e.g. to
+  // /auth/update-password) breaks the caller's res.json() parsing and
+  // surfaces as a generic "failed to update" error instead of the real one.
+  const isApiRoute = pathname.startsWith('/api')
 
   if (!user && !isAuthRoute && !isAssetRoute) {
     // No session — the dispatch console requires a signed-in crew member,
@@ -63,7 +68,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && !isAssetRoute) {
+  if (user && !isAssetRoute && !isApiRoute) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('must_change_password')
