@@ -57,10 +57,11 @@ function useLogin() {
     async function loadProfile(userId) {
       const {
         data: profile
-      } = await supabase.from("profiles").select("username, vehicle").eq("id", userId).single();
+      } = await supabase.from("profiles").select("username, vehicle, is_admin").eq("id", userId).single();
       if (active && profile) setLogin({
         username: profile.username,
-        vehicle: profile.vehicle
+        vehicle: profile.vehicle,
+        isAdmin: profile.is_admin
       });
     }
     supabase.auth.getSession().then(({
@@ -2170,7 +2171,8 @@ function useClock() {
 function Header({
   vehicleId,
   state,
-  onLogOut
+  onLogOut,
+  isAdmin
 }) {
   const now = useClock();
   const st = state.vehicleStates[vehicleId].teamStatus;
@@ -2223,7 +2225,21 @@ function Header({
       fontSize: "clamp(13px, 1.4vw, 18px)",
       color: "#B7C0C8"
     }
-  }, formatTime(now.toISOString())), /*#__PURE__*/React.createElement("button", {
+  }, formatTime(now.toISOString())), isAdmin && /*#__PURE__*/React.createElement("a", {
+    href: "/admin",
+    style: {
+      background: "none",
+      border: "1px solid #2E373F",
+      borderRadius: 6,
+      color: "#7C8791",
+      fontFamily: "Inter, sans-serif",
+      fontSize: "clamp(10px, 1.1vw, 14px)",
+      fontWeight: 600,
+      padding: "clamp(4px, 0.6vw, 8px) clamp(8px, 1vw, 14px)",
+      textDecoration: "none",
+      cursor: "pointer"
+    }
+  }, "Admin"), /*#__PURE__*/React.createElement("button", {
     onClick: onLogOut,
     style: {
       background: "none",
@@ -2563,7 +2579,8 @@ function App() {
   }, pushStatus === "denied" ? "Notifications are blocked — enable them in your browser/phone settings to get alerted when this app isn't open." : "This browser doesn't support push notifications — you'll only see taskings while the app is open."), /*#__PURE__*/React.createElement(Header, {
     vehicleId: vehicleId,
     state: state,
-    onLogOut: logOut
+    onLogOut: logOut,
+    isAdmin: login?.isAdmin
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
