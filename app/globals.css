@@ -5,6 +5,15 @@
   --font-heading: "Oswald", "Oswald Fallback";
   --font-mono: "JetBrains Mono", "JetBrains Mono Fallback";
   --color-background: #05070a;
+  --color-foreground: #f2f5f6;
+  --color-muted-foreground: #7c8791;
+  --color-panel: #161b20;
+  --color-input: #0d1114;
+  --color-border: #2e373f;
+  --color-primary: #e8b23c;
+  --color-primary-foreground: #05070a;
+  --color-danger: #d9463d;
+  --color-success: #3fa34d;
 }
 
 html,
