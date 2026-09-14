@@ -39,9 +39,7 @@ export default function AdminUsersPanel({
   const [isAddingVehicle, setIsAddingVehicle] = useState(false)
 
   const [rowError, setRowError] = useState<string | null>(null)
-  const [resetPasswordFor, setResetPasswordFor] = useState<{ username: string | null; password: string } | null>(
-    null,
-  )
+  const [resetPasswordFor, setResetPasswordFor] = useState<{ username: string | null; email: string } | null>(null)
   const [pendingRowId, setPendingRowId] = useState<string | null>(null)
 
   async function loadUsers() {
@@ -145,7 +143,7 @@ export default function AdminUsersPanel({
       const res = await fetch(`/api/admin/users/${user.id}`, { method: "PATCH" })
       const body = await res.json()
       if (!res.ok) throw new Error(body?.error || "Failed to reset password")
-      setResetPasswordFor({ username: user.username, password: body.password })
+      setResetPasswordFor({ username: user.username, email: body.email })
       loadUsers()
     } catch (err) {
       console.error("[v0] Reset password error:", err)
@@ -193,12 +191,12 @@ export default function AdminUsersPanel({
         {resetPasswordFor && (
           <div className="flex flex-col gap-2 rounded-xl border border-primary/40 bg-primary/10 p-4">
             <div className="font-sans text-xs font-semibold text-foreground">
-              New temporary password for {resetPasswordFor.username ?? "this account"}
+              Password reset email sent to {resetPasswordFor.email}
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <code className="rounded-md border border-border bg-input px-3 py-2 font-mono text-sm text-foreground">
-                {resetPasswordFor.password}
-              </code>
+            <div className="font-sans text-xs text-muted-foreground">
+              {resetPasswordFor.username ?? "This account"} can use the link in the email to choose a new password.
+            </div>
+            <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setResetPasswordFor(null)}
@@ -206,9 +204,6 @@ export default function AdminUsersPanel({
               >
                 Dismiss
               </button>
-            </div>
-            <div className="font-sans text-xs text-muted-foreground">
-              Share this with them directly. They'll be asked to set their own password on next login.
             </div>
           </div>
         )}

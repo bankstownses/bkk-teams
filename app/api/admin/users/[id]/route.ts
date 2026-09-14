@@ -2,13 +2,6 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-function generateTempPassword() {
-  // 12 random bytes, base64url-ish, trimmed to keep it easy to read aloud/type.
-  const bytes = crypto.getRandomValues(new Uint8Array(12))
-  const raw = Array.from(bytes, (b) => b.toString(36)).join("")
-  return `${raw.slice(0, 10)}#${raw.slice(10, 14) || "9x1"}`
-}
-
 async function requireAdmin() {
   const supabase = await createClient()
   const {
@@ -32,21 +25,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (authError) return authError
 
   const admin = createAdminClient()
-  const tempPassword = generateTempPassword()
+  const { data: target, error: targetError } = await admin.auth.admin.getUserById(id)
+  if (targetError || !target.user.email) {
+    console.error("[v0] Failed to find reset recipient:", targetError)
+    return NextResponse.json({ error: "Could not find an email for this account." }, { status: 400 })
+  }
 
-  const { error: updateError } = await admin.auth.admin.updateUserById(id, { password: tempPassword })
-  if (updateError) {
-    console.error("[v0] Failed to reset password:", updateError)
-    return NextResponse.json({ error: "Failed to reset password." }, { status: 400 })
+  const redirectTo = new URL("/auth/callback?next=/auth/update-password", request.url).toString()
+  const supabase = await createClient()
+  const { error: resetError } = await supabase.auth.resetPasswordForEmail(target.user.email, { redirectTo })
+  if (resetError) {
+    console.error("[v0] Failed to send password reset email:", resetError)
+    return NextResponse.json({ error: "Failed to send the password reset email." }, { status: 400 })
   }
 
   const { error: profileError } = await admin.from("profiles").update({ must_change_password: true }).eq("id", id)
   if (profileError) {
     console.error("[v0] Failed to flag password reset:", profileError)
-    return NextResponse.json({ error: "Failed to reset password." }, { status: 500 })
+    return NextResponse.json({ error: "Email sent, but failed to update the account status." }, { status: 500 })
   }
 
-  return NextResponse.json({ password: tempPassword })
+  return NextResponse.json({ email: target.user.email })
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
