@@ -12,5 +12,5 @@ export default async function AdminPage() {
   const { data: profile } = await supabase.from("profiles").select("is_admin, username").eq("id", user.id).single()
   if (!profile?.is_admin) redirect("/")
 
-  return <AdminUsersPanel adminUsername={profile.username} />
+  return <AdminUsersPanel adminUsername={profile.username} adminId={user.id} />
 }

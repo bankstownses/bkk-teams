@@ -43,10 +43,10 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-  const isAssetRoute =
-    request.nextUrl.pathname === '/sw.js' ||
-    request.nextUrl.pathname === '/manifest.webmanifest'
+  const pathname = request.nextUrl.pathname
+  const isAuthRoute = pathname.startsWith('/auth')
+  const isUpdatePasswordRoute = pathname === '/auth/update-password'
+  const isAssetRoute = pathname === '/sw.js' || pathname === '/manifest.webmanifest'
 
   if (!user && !isAuthRoute && !isAssetRoute) {
     // No session — the dispatch console requires a signed-in crew member,
@@ -56,11 +56,33 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && request.nextUrl.pathname.startsWith('/auth')) {
+  if (user && isAuthRoute && !isUpdatePasswordRoute) {
     // Already signed in — no reason to see the login/sign-up forms again.
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
+  }
+
+  if (user && !isAssetRoute) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('must_change_password')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.must_change_password && !isUpdatePasswordRoute) {
+      // First login on an admin-created/reset account — force a new
+      // password before anything else is reachable.
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/update-password'
+      return NextResponse.redirect(url)
+    }
+
+    if (!profile?.must_change_password && isUpdatePasswordRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

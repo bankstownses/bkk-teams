@@ -2,21 +2,6 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-const VEHICLES = [
-  "BKK31",
-  "BKK32",
-  "BKK33",
-  "BKK36",
-  "BKK37",
-  "BKK44",
-  "BKK56",
-  "SES59",
-  "SES43K",
-  "BKK-FEIGE",
-  "BKK-ALLPORT",
-  "BKK-OFEIGE",
-]
-
 async function requireAdmin() {
   const supabase = await createClient()
   const {
@@ -42,7 +27,7 @@ export async function GET() {
 
   const { data: profiles, error: profilesError } = await admin
     .from("profiles")
-    .select("id, username, vehicle, is_admin, created_at")
+    .select("id, username, vehicle, is_admin, must_change_password, created_at")
     .order("created_at", { ascending: true })
 
   if (profilesError) {
@@ -77,12 +62,15 @@ export async function POST(request: Request) {
 
   if (!email) return NextResponse.json({ error: "Email is required." }, { status: 400 })
   if (!username) return NextResponse.json({ error: "Name is required." }, { status: 400 })
-  if (!VEHICLES.includes(vehicle)) return NextResponse.json({ error: "Please select a valid vehicle." }, { status: 400 })
   if (password.length < 8) {
     return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 })
   }
 
   const admin = createAdminClient()
+
+  const { data: vehicleRow } = await admin.from("vehicles").select("code").eq("code", vehicle).single()
+  if (!vehicleRow) return NextResponse.json({ error: "Please select a valid vehicle." }, { status: 400 })
+
   const { data, error: createError } = await admin.auth.admin.createUser({
     email,
     password,

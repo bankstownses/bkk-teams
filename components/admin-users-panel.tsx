@@ -4,33 +4,28 @@ import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import Link from "next/link"
 
-const VEHICLES = [
-  "BKK31",
-  "BKK32",
-  "BKK33",
-  "BKK36",
-  "BKK37",
-  "BKK44",
-  "BKK56",
-  "SES59",
-  "SES43K",
-  "BKK-FEIGE",
-  "BKK-ALLPORT",
-  "BKK-OFEIGE",
-]
-
 type CrewUser = {
   id: string
   username: string | null
   vehicle: string | null
   is_admin: boolean
+  must_change_password: boolean
   email: string | null
   created_at: string
 }
 
-export default function AdminUsersPanel({ adminUsername }: { adminUsername: string | null }) {
+export default function AdminUsersPanel({
+  adminUsername,
+  adminId,
+}: {
+  adminUsername: string | null
+  adminId: string
+}) {
   const [users, setUsers] = useState<CrewUser[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
+  const [vehicles, setVehicles] = useState<string[]>([])
+  const [loadingVehicles, setLoadingVehicles] = useState(true)
+
   const [username, setUsername] = useState("")
   const [vehicle, setVehicle] = useState("")
   const [email, setEmail] = useState("")
@@ -38,6 +33,16 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [newVehicle, setNewVehicle] = useState("")
+  const [vehicleError, setVehicleError] = useState<string | null>(null)
+  const [isAddingVehicle, setIsAddingVehicle] = useState(false)
+
+  const [rowError, setRowError] = useState<string | null>(null)
+  const [resetPasswordFor, setResetPasswordFor] = useState<{ username: string | null; password: string } | null>(
+    null,
+  )
+  const [pendingRowId, setPendingRowId] = useState<string | null>(null)
 
   async function loadUsers() {
     setLoadingUsers(true)
@@ -53,8 +58,23 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
     }
   }
 
+  async function loadVehicles() {
+    setLoadingVehicles(true)
+    try {
+      const res = await fetch("/api/admin/vehicles")
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || "Failed to load vehicles")
+      setVehicles(body.vehicles ?? [])
+    } catch (err) {
+      console.error("[v0] Failed to load vehicles:", err)
+    } finally {
+      setLoadingVehicles(false)
+    }
+  }
+
   useEffect(() => {
     loadUsers()
+    loadVehicles()
   }, [])
 
   async function handleCreate(e: FormEvent) {
@@ -76,7 +96,7 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
       })
       const body = await res.json()
       if (!res.ok) throw new Error(body?.error || "Failed to create account")
-      setSuccess(`Account created for ${email}.`)
+      setSuccess(`Account created for ${email}. They'll be asked to set a new password on first login.`)
       setUsername("")
       setVehicle("")
       setEmail("")
@@ -87,6 +107,70 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
       setError(err instanceof Error ? err.message : "Failed to create account")
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handleAddVehicle(e: FormEvent) {
+    e.preventDefault()
+    setVehicleError(null)
+
+    if (!newVehicle.trim()) {
+      setVehicleError("Please enter a vehicle code.")
+      return
+    }
+
+    setIsAddingVehicle(true)
+    try {
+      const res = await fetch("/api/admin/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: newVehicle }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || "Failed to add vehicle")
+      setNewVehicle("")
+      loadVehicles()
+    } catch (err) {
+      console.error("[v0] Add vehicle error:", err)
+      setVehicleError(err instanceof Error ? err.message : "Failed to add vehicle")
+    } finally {
+      setIsAddingVehicle(false)
+    }
+  }
+
+  async function handleResetPassword(user: CrewUser) {
+    setRowError(null)
+    setPendingRowId(user.id)
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: "PATCH" })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || "Failed to reset password")
+      setResetPasswordFor({ username: user.username, password: body.password })
+      loadUsers()
+    } catch (err) {
+      console.error("[v0] Reset password error:", err)
+      setRowError(err instanceof Error ? err.message : "Failed to reset password")
+    } finally {
+      setPendingRowId(null)
+    }
+  }
+
+  async function handleDelete(user: CrewUser) {
+    if (!window.confirm(`Delete the account for ${user.username ?? user.email}? This can't be undone.`)) {
+      return
+    }
+    setRowError(null)
+    setPendingRowId(user.id)
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.error || "Failed to delete account")
+      setUsers((prev) => prev.filter((u) => u.id !== user.id))
+    } catch (err) {
+      console.error("[v0] Delete account error:", err)
+      setRowError(err instanceof Error ? err.message : "Failed to delete account")
+    } finally {
+      setPendingRowId(null)
     }
   }
 
@@ -105,6 +189,29 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
             Back to dispatch
           </Link>
         </div>
+
+        {resetPasswordFor && (
+          <div className="flex flex-col gap-2 rounded-xl border border-primary/40 bg-primary/10 p-4">
+            <div className="font-sans text-xs font-semibold text-foreground">
+              New temporary password for {resetPasswordFor.username ?? "this account"}
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <code className="rounded-md border border-border bg-input px-3 py-2 font-mono text-sm text-foreground">
+                {resetPasswordFor.password}
+              </code>
+              <button
+                type="button"
+                onClick={() => setResetPasswordFor(null)}
+                className="rounded-lg border border-border px-3 py-2 font-sans text-xs font-semibold text-muted-foreground"
+              >
+                Dismiss
+              </button>
+            </div>
+            <div className="font-sans text-xs text-muted-foreground">
+              Share this with them directly. They'll be asked to set their own password on next login.
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleCreate} className="flex flex-col gap-5 rounded-xl border border-border bg-panel p-6">
           <div className="font-heading text-sm font-bold tracking-wide text-foreground">CREATE ACCOUNT</div>
@@ -134,12 +241,13 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
                 required
                 value={vehicle}
                 onChange={(e) => setVehicle(e.target.value)}
-                className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-sm text-foreground outline-none focus:border-primary"
+                disabled={loadingVehicles}
+                className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-sm text-foreground outline-none focus:border-primary disabled:opacity-60"
               >
                 <option value="" disabled>
-                  Select a vehicle
+                  {loadingVehicles ? "Loading…" : "Select a vehicle"}
                 </option>
-                {VEHICLES.map((v) => (
+                {vehicles.map((v) => (
                   <option key={v} value={v}>
                     {v}
                   </option>
@@ -203,6 +311,11 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
 
         <div className="flex flex-col gap-3 rounded-xl border border-border bg-panel p-6">
           <div className="font-heading text-sm font-bold tracking-wide text-foreground">EXISTING ACCOUNTS</div>
+          {rowError && (
+            <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 font-sans text-xs text-danger">
+              {rowError}
+            </div>
+          )}
           {loadingUsers ? (
             <div className="font-sans text-xs text-muted-foreground">Loading…</div>
           ) : users.length === 0 ? (
@@ -214,8 +327,11 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
                   <div className="flex flex-col">
                     <span className="font-sans text-sm font-semibold text-foreground">{u.username ?? "—"}</span>
                     <span className="font-sans text-xs text-muted-foreground">{u.email}</span>
+                    {u.must_change_password && (
+                      <span className="font-sans text-xs text-muted-foreground">Awaiting first-login password set</span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span className="rounded-md border border-border px-2 py-1 font-mono text-xs text-muted-foreground">
                       {u.vehicle ?? "—"}
                     </span>
@@ -224,12 +340,79 @@ export default function AdminUsersPanel({ adminUsername }: { adminUsername: stri
                         Admin
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => handleResetPassword(u)}
+                      disabled={pendingRowId === u.id}
+                      className="rounded-md border border-border px-2 py-1 font-sans text-xs font-semibold text-muted-foreground disabled:opacity-60"
+                    >
+                      Reset password
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(u)}
+                      disabled={pendingRowId === u.id || u.id === adminId}
+                      title={u.id === adminId ? "You can't delete your own account" : undefined}
+                      className="rounded-md border border-danger/40 px-2 py-1 font-sans text-xs font-semibold text-danger disabled:opacity-40"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        <form onSubmit={handleAddVehicle} className="flex flex-col gap-4 rounded-xl border border-border bg-panel p-6">
+          <div className="font-heading text-sm font-bold tracking-wide text-foreground">VEHICLES</div>
+
+          <div className="flex flex-wrap gap-2">
+            {loadingVehicles ? (
+              <span className="font-sans text-xs text-muted-foreground">Loading…</span>
+            ) : vehicles.length === 0 ? (
+              <span className="font-sans text-xs text-muted-foreground">No vehicles yet.</span>
+            ) : (
+              vehicles.map((v) => (
+                <span
+                  key={v}
+                  className="rounded-md border border-border bg-input px-2.5 py-1 font-mono text-xs text-foreground"
+                >
+                  {v}
+                </span>
+              ))
+            )}
+          </div>
+
+          <div className="flex items-end gap-3">
+            <div className="flex flex-1 flex-col gap-1.5">
+              <label htmlFor="newVehicle" className="font-sans text-xs font-semibold text-muted-foreground">
+                Add vehicle
+              </label>
+              <input
+                id="newVehicle"
+                type="text"
+                value={newVehicle}
+                onChange={(e) => setNewVehicle(e.target.value)}
+                placeholder="e.g. BKK21"
+                className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isAddingVehicle}
+              className="rounded-lg bg-primary px-5 py-2.5 font-heading text-sm font-bold tracking-wide text-primary-foreground disabled:opacity-60"
+            >
+              {isAddingVehicle ? "ADDING…" : "ADD"}
+            </button>
+          </div>
+
+          {vehicleError && (
+            <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 font-sans text-xs text-danger">
+              {vehicleError}
+            </div>
+          )}
+        </form>
       </div>
     </div>
   )
